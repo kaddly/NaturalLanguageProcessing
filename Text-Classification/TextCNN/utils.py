@@ -27,6 +27,7 @@ def clean_str(string):
     string = re.sub(r"\)", " \) ", string)
     string = re.sub(r"\?", " \? ", string)
     string = re.sub(r"\s{2,}", " ", string)
+    string = re.sub('[^A-Za-z]+', ' ', string)
     return string.strip().lower()
 
 
@@ -58,6 +59,7 @@ def train_test_split(dataset):
     dev_len = data_len // 10 * 2
     test_len = data_len // 10
     train_f = open(dataset + '/data/train.txt', 'w')
+    pos_nums = 0
     for i in range(train_len):
         train_f.write(shuffle_data[i][0] + '\t' + str(shuffle_data[i][1]) + '\n')
     dev_f = open(dataset + '/data/dev.txt', 'w')

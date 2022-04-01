@@ -28,7 +28,7 @@ class Config(object):
         self.embed = 300  # 字向量维度
         self.filter_sizes = (2, 3, 4)  # 卷积核尺寸
         self.num_filters = 256  # 卷积核数量(channels数)
-        self.tokenizer = lambda x: [y for y in x]  # char-level
+        self.tokenizer = lambda x: x.split()  # char-level
         self.max_size = 10000
         self.min_freq = 1
         self.UNK, self.PAD = '<UNK>', '<PAD>'  # 未知字，padding符号
