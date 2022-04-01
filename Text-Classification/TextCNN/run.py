@@ -8,9 +8,9 @@ from torch.utils.data import DataLoader
 
 if __name__ == '__main__':
 
-    dataset = 'rt-polaritydata'  # 数据集
+    dataset = 'THUCNews'  # 数据集
 
-    train_test_split(dataset)
+    # train_test_split(dataset)
 
     config = Config(dataset)
 
