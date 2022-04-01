@@ -2,13 +2,15 @@
 import torch
 import numpy as np
 from train_eval import train, init_network
-from utils import My_Dataset, build_vocab
+from utils import My_Dataset, build_vocab, train_test_split
 from TextCNN import Config, Model
 from torch.utils.data import DataLoader
 
 if __name__ == '__main__':
 
-    dataset = 'THUCNews'  # 数据集
+    dataset = 'rt-polaritydata'  # 数据集
+
+    train_test_split(dataset)
 
     config = Config(dataset)
 

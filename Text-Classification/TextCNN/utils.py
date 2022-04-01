@@ -7,8 +7,65 @@ from tqdm import tqdm
 import time
 from datetime import timedelta
 import pandas as pd
+import re
 
 UNK, PAD = '<UNK>', '<PAD>'
+
+
+def clean_str(string):
+    # 清理数据替换无词义的符号
+    string = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", string)
+    string = re.sub(r"\'s", " \'s", string)
+    string = re.sub(r"\'ve", " \'ve", string)
+    string = re.sub(r"n\'t", " n\'t", string)
+    string = re.sub(r"\'re", " \'re", string)
+    string = re.sub(r"\'d", " \'d", string)
+    string = re.sub(r"\'ll", " \'ll", string)
+    string = re.sub(r",", " , ", string)
+    string = re.sub(r"!", " ! ", string)
+    string = re.sub(r"\(", " \( ", string)
+    string = re.sub(r"\)", " \) ", string)
+    string = re.sub(r"\?", " \? ", string)
+    string = re.sub(r"\s{2,}", " ", string)
+    return string.strip().lower()
+
+
+def train_test_split(dataset):
+    positive_data_file = dataset + '/rt-polarity.pos'
+    negative_data_file = dataset + '/rt-polarity.neg'
+    # Load data from files
+    # 加载数据
+    positive_examples = list(open(positive_data_file, "r", encoding='UTF-8').readlines())
+    positive_examples = [s.strip() for s in positive_examples]  # 去空格
+    negative_examples = list(open(negative_data_file, "r", encoding='UTF-8').readlines())
+    negative_examples = [s.strip() for s in negative_examples]  # 去空格
+    # Split by words
+    x_text = positive_examples + negative_examples
+    x_text = [clean_str(sent) for sent in x_text]  # 字符过滤，实现函数见clean_str()
+    # Generate labels
+    # 生成标签
+    positive_labels = [0 for _ in positive_examples]
+    negative_labels = [1 for _ in negative_examples]
+    y = np.concatenate([positive_labels, negative_labels], 0)  # 将两种label连在一起
+    # shuffle
+    data_len = len(y)
+    shuffle_indices = np.random.permutation(np.arange(data_len))
+    shuffle_data = []
+    for i in shuffle_indices:
+        shuffle_data.append((x_text[i], y[i]))
+    # 划分训练集测试集验证集
+    train_len = data_len // 10 * 7
+    dev_len = data_len // 10 * 2
+    test_len = data_len // 10
+    train_f = open(dataset + '/data/train.txt', 'w')
+    for i in range(train_len):
+        train_f.write(shuffle_data[i][0] + '\t' + str(shuffle_data[i][1]) + '\n')
+    dev_f = open(dataset + '/data/dev.txt', 'w')
+    for i in range(train_len, (dev_len + train_len)):
+        dev_f.write(shuffle_data[i][0] + '\t' + str(shuffle_data[i][1]) + '\n')
+    test_f = open(dataset + '/data/test.txt', 'w')
+    for i in range((train_len + dev_len), data_len):
+        test_f.write(shuffle_data[i][0] + '\t' + str(shuffle_data[i][1]) + '\n')
 
 
 def build_vocab(config):
