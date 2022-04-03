@@ -5,7 +5,7 @@ import re
 
 
 def read_time_machine():
-    with open('./data/timemachine.txt', 'r') as f:
+    with open('data/timemachine.txt', 'r') as f:
         lines = f.readlines()
     return [re.sub('[^A-Za-z]+', ' ', line) for line in lines]
 
@@ -80,3 +80,8 @@ def load_corpus_time_machine(max_tokens=-1):
     return corpus, vocab
 
 
+class My_Dataset(dataset):
+    def __init__(self, config):
+        self.config = config
+        self.tokens = tokenize(read_time_machine())
+        self.vocab = Vocab(self.tokens)
