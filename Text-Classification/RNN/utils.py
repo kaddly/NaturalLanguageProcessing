@@ -1,6 +1,13 @@
 import torch
 from torch.utils.data import dataset
 import collections
+import re
+
+
+def read_time_machine():
+    with open('./data/timemachine.txt', 'r') as f:
+        lines = f.readlines()
+    return [re.sub('[^A-Za-z]+', ' ', line) for line in lines]
 
 
 def tokenize(lines, token='word'):
@@ -56,7 +63,20 @@ class Vocab:
 
 
 def count_corpus(tokens):
+    """统计词元的频率"""
     # 这里的tokens是1d或者2d列表
     if len(tokens) == 0 or isinstance(tokens[0], list):
         tokens = [token for line in tokens for token in line]
-    return collections.Container(tokens)
+    return collections.Counter(tokens)
+
+
+def load_corpus_time_machine(max_tokens=-1):
+    lines = read_time_machine()
+    tokens = tokenize(lines, 'word')
+    vocab = Vocab(tokens)
+    corpus = [vocab[token] for line in tokens for token in line]
+    if max_tokens > 0:
+        return corpus[:max_tokens], vocab
+    return corpus, vocab
+
+
