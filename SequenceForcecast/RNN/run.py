@@ -13,4 +13,4 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     net = RNNModel(rnn_layer, vocab_size=len(vocab))
     net = net.to(device)
-    train_seq(net,train_iter,vocab,lr,num_epochs,device)
+    train_seq(net, train_iter, vocab, lr, num_epochs, device)
