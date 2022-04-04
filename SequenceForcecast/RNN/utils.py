@@ -1,7 +1,8 @@
 import torch
-from torch.utils.data import dataset
+from torch.utils import data
 import collections
 import re
+import random
 
 
 def read_time_machine():
@@ -80,8 +81,33 @@ def load_corpus_time_machine(max_tokens=-1):
     return corpus, vocab
 
 
-class My_Dataset(dataset):
-    def __init__(self, config):
-        self.config = config
-        self.tokens = tokenize(read_time_machine())
-        self.vocab = Vocab(self.tokens)
+def load_array(data_arrays, batch_size, is_train=True):
+    """构造⼀个PyTorch数据迭代器"""
+    dataset = data.TensorDataset(*data_arrays)
+    return data.DataLoader(dataset, batch_size, shuffle=is_train)
+
+
+def seq_data_iter_random(corpus, batch_size, num_steps):
+    """使⽤随机抽样⽣成⼀个⼩批量⼦序列"""
+    # 从随机偏移量开始对序列进⾏分区，随机范围包括num_steps-1
+    corpus = corpus[random.randint(0, num_steps - 1):]
+    # 减去1是因为需要考虑到标签
+    num_subseqs = (len(corpus) - 1) // num_steps
+    # 长度为num_steps的子序列起始索引
+    initial_indices = list(range(0, num_subseqs * num_steps, num_steps))
+    # 在随机抽样的迭代过程中，
+    # 来⾃两个相邻的、随机的、⼩批量中的⼦序列不⼀定在原始序列上相邻
+    random.shuffle(initial_indices)
+
+    def data(pos):
+        # 返回从pos位置开始的长度为num_steps的子序列
+        return corpus[pos:num_steps + pos]
+
+    num_batches = num_subseqs // batch_size
+    for i in range(0, batch_size * num_batches, batch_size):
+        # 在这⾥，initial_indices包含⼦序列的随机起始索引
+        initial_indices_per_batch = initial_indices[i: i + batch_size]
+        X = [data(j) for j in initial_indices_per_batch]
+        Y = [data(j + 1) for j in initial_indices_per_batch]
+        yield torch.tensor(X), torch.tensor(Y)
+
