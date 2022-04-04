@@ -75,7 +75,7 @@ def train_seq(net, train_iter, vocab, lr, num_epochs, device, use_random_iter=Fa
     for epoch in range(num_epochs):
         ppl, speed = train_epoch_seq(net, train_iter, loss, updater, device, use_random_iter)
         if (epoch + 1) % 10 == 0:
-            print("epoch:" + str((epoch + 1)) + f'困惑度 {ppl:.1f}')
+            print("epoch:" + str((epoch + 1))+'>>' + f'困惑度 {ppl:.1f}')
             print(predict('time traveller'))
     print(f'困惑度 {ppl:.1f}, {speed:.1f} 词元/秒 {str(device)}')
     print(predict('time traveller'))

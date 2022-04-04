@@ -8,7 +8,7 @@ import random
 def read_time_machine():
     with open('data/timemachine.txt', 'r') as f:
         lines = f.readlines()
-    return [re.sub('[^A-Za-z]+', ' ', line) for line in lines]
+    return [re.sub('[^A-Za-z]+', ' ', line).strip().lower() for line in lines]
 
 
 def tokenize(lines, token='word'):
@@ -73,7 +73,7 @@ def count_corpus(tokens):
 
 def load_corpus_time_machine(max_tokens=-1):
     lines = read_time_machine()
-    tokens = tokenize(lines, 'word')
+    tokens = tokenize(lines, 'char')
     vocab = Vocab(tokens)
     corpus = [vocab[token] for line in tokens for token in line]
     if max_tokens > 0:
@@ -112,7 +112,7 @@ def seq_data_iter_random(corpus, batch_size, num_steps):
         yield torch.tensor(X), torch.tensor(Y)
 
 
-def seq_data_iter_sequential(corpus, batch_size, num_steps):  # @save
+def seq_data_iter_sequential(corpus, batch_size, num_steps):
     """使⽤顺序分区⽣成⼀个⼩批量⼦序列"""
     # 从随机偏移量开始划分序列
     offset = random.randint(0, num_steps)
@@ -127,7 +127,7 @@ def seq_data_iter_sequential(corpus, batch_size, num_steps):  # @save
         yield X, Y
 
 
-class SeqDataLoader:  # @save
+class SeqDataLoader:
     """加载序列数据的迭代器"""
 
     def __init__(self, batch_size, num_steps, use_random_iter, max_tokens):
@@ -142,7 +142,7 @@ class SeqDataLoader:  # @save
         return self.data_iter_fn(self.corpus, self.batch_size, self.num_steps)
 
 
-def load_data_time_machine(batch_size, num_steps,  # @save
+def load_data_time_machine(batch_size, num_steps,
                            use_random_iter=False, max_tokens=10000):
     """返回时光机器数据集的迭代器和词表"""
     data_iter = SeqDataLoader(

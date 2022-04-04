@@ -11,10 +11,10 @@ class RNNModel(nn.Module):
         self.vocab_size = vocab_size
         self.num_hiddens = self.rnn.hidden_size
         if not self.rnn.bidirectional:
-            self.num_hiddens = 1
+            self.num_directions = 1
             self.linear = nn.Linear(self.num_hiddens, self.vocab_size)
         else:
-            self.num_hiddens = 2
+            self.num_directions = 2
             self.linear = nn.Linear(self.num_hiddens * 2, self.vocab_size)
 
     def forward(self, input, state):
