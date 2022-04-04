@@ -111,3 +111,17 @@ def seq_data_iter_random(corpus, batch_size, num_steps):
         Y = [data(j + 1) for j in initial_indices_per_batch]
         yield torch.tensor(X), torch.tensor(Y)
 
+
+def seq_data_iter_sequential(corpus, batch_size, num_steps):  # @save
+    """使⽤顺序分区⽣成⼀个⼩批量⼦序列"""
+    # 从随机偏移量开始划分序列
+    offset = random.randint(0, num_steps)
+    num_tokens = ((len(corpus) - offset - 1) // batch_size) * batch_size
+    Xs = torch.tensor(corpus[offset: offset + num_tokens])
+    Ys = torch.tensor(corpus[offset + 1: offset + 1 + num_tokens])
+    Xs, Ys = Xs.reshape(batch_size, -1), Ys.reshape(batch_size, -1)
+    num_batches = Xs.shape[1] // num_steps
+    for i in range(0, num_steps * num_batches, num_steps):
+        X = Xs[:, i: i + num_steps]
+        Y = Ys[:, i: i + num_steps]
+        yield X, Y
