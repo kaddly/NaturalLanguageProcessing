@@ -6,7 +6,7 @@ import random
 
 
 def read_time_machine():
-    with open('data/timemachine.txt', 'r') as f:
+    with open('../RNN/data/timemachine.txt', 'r') as f:
         lines = f.readlines()
     return [re.sub('[^A-Za-z]+', ' ', line).strip().lower() for line in lines]
 
