@@ -1,6 +1,6 @@
-from RNN import *
-from utils import *
-from train_eval import *
+from RNN import RNNModel
+from utils import load_data_time_machine
+from train_eval import train_seq
 import torch
 import torch.nn as nn
 
