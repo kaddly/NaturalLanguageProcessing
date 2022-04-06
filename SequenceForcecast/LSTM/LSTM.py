@@ -48,32 +48,37 @@ def getParams(vocab_size, num_hiddens, device):
             normal((num_inputs, num_hiddens)), normal((num_hiddens, num_hiddens)),
             torch.zeros(num_hiddens, device=device))
 
-    W_xz, W_hz, b_z = tree()  # 更新门参数
-    W_xr, W_hr, b_r = tree()  # 重置门参数
-    W_xh, W_hh, b_h = tree()  # 候选隐藏门参数
+    W_xi, W_hi, b_i = tree()  # 输入门
+    W_xo, W_ho, b_o = tree()  # 输出门
+    W_xf, W_hf, b_f = tree()  # 遗忘门
+    W_xc, W_hc, b_c = tree()  # 候选记忆元参数
     # 输出层参数
     W_hq = normal((num_hiddens, num_output))
     b_q = torch.zeros(size=num_hiddens, device=device)
-    params = [W_xz, W_hz, b_z, W_xr, W_hr, b_r, W_xh, W_hh, b_h, W_hq, b_q]
+    params = [W_xi, W_hi, b_i, W_xf, W_hf, b_f, W_xo, W_ho, b_o, W_xc, W_hc, b_c, W_hq, b_q]
     for param in params:
         param.requires_grad_(True)
     return params
 
 
-def init_gru_state(batch_size, num_hiddens, device):
-    return (torch.zeros(size=(batch_size, num_hiddens), device=device),)
+def init_lstm_state(batch_size, num_hiddens, device):
+    return (torch.zeros(size=(batch_size, num_hiddens), device=device),
+            torch.zeros(size=(batch_size, num_hiddens), device=device))
 
 
-def gru(inputs, state, params):
-    W_xz, W_hz, b_z, W_xr, W_hr, b_r, W_xh, W_hh, b_h, W_hq, b_q = params
-    H, = state
+def lstm(inputs, state, params):
+    [W_xi, W_hi, b_i, W_xf, W_hf, b_f, W_xo, W_ho, b_o, W_xc, W_hc, b_c,
+     W_hq, b_q] = params
+    (H, C) = state
 
     outputs = []
     for X in inputs:
-        Z = torch.sigmoid((X @ W_xz) + (H @ W_hz) + b_z)
-        R = torch.sigmoid((X @ W_xr) + (H @ W_hr) + b_r)
-        H_tilda = torch.tanh((X @ W_xh) + (R * H) @ W_hh + b_h)
-        H = Z * H + (1 - Z) * H_tilda
-        Y = H @ W_hq + b_q
+        I = torch.sigmoid((W_xi @ X) + (W_hi @ H) + b_i)
+        F = torch.sigmoid((W_xf @ X) + (W_hf @ H) + b_f)
+        O = torch.sigmoid((W_xo @ X) + (W_ho @ H) + b_o)
+        C_tilda = torch.tanh((X @ W_xc) + (H @ W_hc) + b_c)
+        C = C * F + C_tilda * I
+        H = O * torch.tanh(C)
+        Y = W_hq @ H + b_q
         outputs.append(Y)
-    return torch.cat(outputs, dim=0), (H,)
+    return torch.cat(outputs, dim=0), (H, C)
