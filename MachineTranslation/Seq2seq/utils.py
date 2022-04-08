@@ -108,3 +108,15 @@ def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
 # source, target = tokenize_nmt(preprocess_nmt(read_data_nmt()))
 # show_list_len_pair_hist(['source', 'target'], '# tokens per sequence', 'count', source, target)
 # plt.show()
+
+class My_Dataset(Dataset):
+    def __init__(self, min_freq=2, num_steps=10, num_examples=600):
+        self.source, self.target = tokenize_nmt(preprocess_nmt(read_data_nmt()), num_examples=num_examples)
+        self.src_vocab = Vocab(self.source, min_freq=min_freq, reserved_tokens=['<pad>', '<bos>', '<eos>'])
+        self.tgt_vocab = Vocab(self.target, min_freq=min_freq, reserved_tokens=['<pad>', '<bos>', '<eos>'])
+
+    def __len__(self):
+        pass
+
+    def __getitem__(self, item):
+        pass
