@@ -139,13 +139,3 @@ class My_Dataset(Dataset):
     def get_vocab(self):
         return self.src_vocab, self.tgt_vocab
 
-
-my_dataset = My_Dataset(num_steps=8)
-train_iter = torch.utils.data.DataLoader(my_dataset, batch_size=2,shuffle=True)
-
-for X, X_valid_len, Y, Y_valid_len in train_iter:
-    print('X:', X.type(torch.int32))
-    print('X的有效⻓度:', X_valid_len)
-    print('Y:', Y.type(torch.int32))
-    print('Y的有效⻓度:', Y_valid_len)
-    break
