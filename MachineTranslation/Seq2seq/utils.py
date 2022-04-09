@@ -21,7 +21,7 @@ class Vocab:
         # 未知词元索引为0
         self.idx_to_token = ['<UNK>'] + reserved_tokens
         self.token_to_idx = {token: idx for idx, token in enumerate(self.idx_to_token)}
-        self.idx_to_token, self.token_to_idx = [], dict()
+        # self.idx_to_token, self.token_to_idx = [], dict()
         for token, freq in self._token_freqs:
             if freq < min_freq:
                 break
@@ -111,12 +111,41 @@ def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
 
 class My_Dataset(Dataset):
     def __init__(self, min_freq=2, num_steps=10, num_examples=600):
+        self.num_steps = num_steps
         self.source, self.target = tokenize_nmt(preprocess_nmt(read_data_nmt()), num_examples=num_examples)
         self.src_vocab = Vocab(self.source, min_freq=min_freq, reserved_tokens=['<pad>', '<bos>', '<eos>'])
         self.tgt_vocab = Vocab(self.target, min_freq=min_freq, reserved_tokens=['<pad>', '<bos>', '<eos>'])
+        self.src_lines = [self.src_vocab[l] + [self.src_vocab['<eos>']] for l in self.source]
+        self.tgt_lines = [self.src_vocab[l] + [self.src_vocab['<eos>']] for l in self.target]
 
     def __len__(self):
         return len(self.source)
 
     def __getitem__(self, item):
-        pass
+        src, tgt = self.src_lines[item], self.tgt_lines[item]
+        src_len, tgt_len = len(src), len(tgt)
+        if len(src) > self.num_steps:
+            src = src[:self.num_steps]
+            src_len = len(src)
+        else:
+            src += [self.src_vocab['<pad>']] * (self.num_steps - src_len)
+        if len(src) > self.num_steps:
+            tgt = tgt[:self.num_steps]
+            tgt_len = len(tgt)
+        else:
+            tgt += [self.tgt_vocab['<pad>']] * (self.num_steps - tgt_len)
+        return torch.tensor(src), torch.tensor(int(src_len)), torch.tensor(tgt), torch.tensor(int(tgt_len))
+
+    def get_vocab(self):
+        return self.src_vocab, self.tgt_vocab
+
+
+my_dataset = My_Dataset(num_steps=8)
+train_iter = torch.utils.data.DataLoader(my_dataset, batch_size=2,shuffle=True)
+
+for X, X_valid_len, Y, Y_valid_len in train_iter:
+    print('X:', X.type(torch.int32))
+    print('X的有效⻓度:', X_valid_len)
+    print('Y:', Y.type(torch.int32))
+    print('Y的有效⻓度:', Y_valid_len)
+    break
