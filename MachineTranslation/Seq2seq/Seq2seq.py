@@ -26,6 +26,7 @@ class Decoder(nn.Module):
 
 class EncoderDecoder(nn.Module):
     """编码器-解码器架构的基类"""
+
     def __init__(self, encoder, decoder, **kwargs):
         super(EncoderDecoder, self).__init__(**kwargs)
         self.encoder = encoder
@@ -34,4 +35,12 @@ class EncoderDecoder(nn.Module):
     def forward(self, enc_X, dec_X, *args):
         enc_outputs = self.encoder(enc_X)
         dec_state = self.decoder.init_state(enc_outputs, *args)
-        return self.decoder(dec_X,dec_state)
+        return self.decoder(dec_X, dec_state)
+
+
+class Seq2SeqEncoder(Encoder):
+    def __init__(self):
+        pass
+
+    def forward(self):
+        pass
