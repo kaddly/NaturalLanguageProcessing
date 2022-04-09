@@ -116,7 +116,7 @@ class My_Dataset(Dataset):
         self.tgt_vocab = Vocab(self.target, min_freq=min_freq, reserved_tokens=['<pad>', '<bos>', '<eos>'])
 
     def __len__(self):
-        pass
+        return len(self.source)
 
     def __getitem__(self, item):
         pass
