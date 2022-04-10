@@ -73,3 +73,43 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
             print(f"epoch>>{(epoch + 1)}:loss>>{l_sum / num_tokens:.3f}")
     print(f'loss {l_sum / num_tokens:.3f}, {num_tokens / (time.time() - tik):.1f} '
           f'tokens/sec on {str(device)}')
+
+
+def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
+                    device, save_attention_weights=False):
+    """序列到序列模型的预测"""
+
+    # 在预测时将net设置为评估模式
+    net.eval()
+    src_tokens = src_vocab[src_sentence.lower().split(' ')] + [src_vocab['<eos>']]
+    enc_valid_len = torch.tensor([len(src_tokens)], device=device)
+    if enc_valid_len > num_steps:
+        src_tokens = src_tokens[:num_steps]
+        enc_valid_len = len(src_tokens)
+    else:
+        src_tokens += [src_vocab['<pad>']] * (num_steps - enc_valid_len)
+    # 添加批量轴
+    enc_X = torch.unsqueeze(torch.tensor(src_tokens, dtype=torch.long, device=device), dim=0)
+    enc_outputs = net.encoder(enc_X, enc_valid_len)
+    dec_state = net.decoder.init_state(enc_outputs, enc_valid_len)
+    # 添加批量轴
+    dec_X = torch.unsqueeze(torch.tensor([tgt_vocab['<bos>']], dtype=torch.long, device=device), dim=0)
+    output_seq, attention_weight_seq = [], []
+    for _ in range(num_steps):
+        Y, dec_state = net.decoder(dec_X, dec_state)
+        # 我们使⽤具有预测最⾼可能性的词元，作为解码器在下⼀时间步的输⼊
+        dec_X = Y.argmax(dim=2)
+        pred = dec_X.squeeze(dim=0).type(torch.int32).item()
+        if save_attention_weights:
+            attention_weight_seq.append(net.decoder.attention_weights)
+        # ⼀旦序列结束词元被预测，输出序列的⽣成就完成了
+        if pred == tgt_vocab['<eos>']:
+            break
+        output_seq.append(pred)
+    return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
+
+
+def blue(pred_seq, label_seq, k):
+    """计算BLEU"""
+
+    pass
