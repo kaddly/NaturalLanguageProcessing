@@ -40,7 +40,7 @@ class EncoderDecoder(nn.Module):
 
 class Seq2SeqEncoder(Encoder):
     def __init__(self):
-        pass
+        super(Seq2SeqEncoder, self).__init__()
 
     def forward(self):
         pass
