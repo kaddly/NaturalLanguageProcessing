@@ -84,5 +84,3 @@ class Seq2SeqDecoder(Decoder):
         # output的形状:(batch_size,num_steps,vocab_size)
         # state[0]的形状:(num_layers,batch_size,num_hiddens)
         return output, state
-
-
