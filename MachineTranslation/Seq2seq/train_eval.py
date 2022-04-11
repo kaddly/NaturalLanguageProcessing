@@ -109,7 +109,7 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 
 
-def blue(pred_seq, label_seq, k):
+def bleu(pred_seq, label_seq, k):
     """计算BLEU"""
-
+    
     pass
