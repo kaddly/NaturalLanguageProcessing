@@ -72,7 +72,7 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
             with torch.no_grad():
                 l_sum = l.sum()
         if (epoch + 1) % 10 == 0:
-            print(f"epoch>>{(epoch + 1)}:loss>>{l_sum / num_tokens:.3f}")
+            print(f"epoch:{(epoch + 1)}>>loss:{l_sum / num_tokens:.3f}")
     print(f'loss {l_sum / num_tokens:.3f}, {num_tokens / (time.time() - tik):.1f} '
           f'tokens/sec on {str(device)}')
 
