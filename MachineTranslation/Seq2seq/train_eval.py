@@ -48,7 +48,7 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
             nn.init.xavier_uniform_(m.weight)
         if type(m) == nn.GRU:
             for param in m._flat_weights_names:
-                if 'weight' in param:
+                if "weight" in param:
                     nn.init.xavier_uniform_(m._parameters[param])
 
     net.apply(xavier_init_weights)
