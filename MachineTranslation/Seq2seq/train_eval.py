@@ -124,5 +124,5 @@ def bleu(pred_seq, label_seq, k):
             if label_subs[' '.join(pred_tokens[i: i + n])] > 0:
                 num_matches += 1
                 label_subs[' '.join(pred_tokens[i: i + n])] -= 1
-        score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
+        score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))  # 长匹配有高权重
     return score
