@@ -3,10 +3,12 @@ import torch.nn as nn
 import time
 import math
 import collections
+from utils import truncate_pad
 
 
 def sequence_mask(X, valid_len, value=0):
-    """在序列中屏蔽不相关的项"""
+
+    """在序列中屏蔽不相关的项。"""
     maxlen = X.size(1)
     mask = torch.arange((maxlen), dtype=torch.float32, device=X.device)[None, :] < valid_len[:, None]
     X[~mask] = value
@@ -16,9 +18,9 @@ def sequence_mask(X, valid_len, value=0):
 class MaskedSoftmaxCELoss(nn.CrossEntropyLoss):
     """带遮蔽的softmax交叉熵损失函数"""
 
-    # pred的形状：(batch_size,num_steps,vocab_size)
-    # label的形状：(batch_size,num_steps)
-    # valid_len的形状：(batch_size,)
+    # `pred` 的形状：(`batch_size`, `num_steps`, `vocab_size`)
+    # `label` 的形状：(`batch_size`, `num_steps`)
+    # `valid_len` 的形状：(`batch_size`,)
     def forward(self, pred, label, valid_len):
         weights = torch.ones_like(label)
         weights = sequence_mask(weights, valid_len)
@@ -41,7 +43,7 @@ def grad_clipping(net, theta):  # @save
 
 
 def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
-    """训练序列到序列模型"""
+    """训练序列到序列模型。"""
 
     def xavier_init_weights(m):
         if type(m) == nn.Linear:
@@ -77,19 +79,13 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
           f'tokens/sec on {str(device)}')
 
 
-def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
-                    device, save_attention_weights=False):
+def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, save_attention_weights=False):
     """序列到序列模型的预测"""
-
-    # 在预测时将net设置为评估模式
+    # 在预测时将`net`设置为评估模式
     net.eval()
     src_tokens = src_vocab[src_sentence.lower().split(' ')] + [src_vocab['<eos>']]
     enc_valid_len = torch.tensor([len(src_tokens)], device=device)
-    if enc_valid_len > num_steps:
-        src_tokens = src_tokens[:num_steps]
-        enc_valid_len = len(src_tokens)
-    else:
-        src_tokens += [src_vocab['<pad>']] * (num_steps - enc_valid_len)
+    src_tokens = truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
     # 添加批量轴
     enc_X = torch.unsqueeze(torch.tensor(src_tokens, dtype=torch.long, device=device), dim=0)
     enc_outputs = net.encoder(enc_X, enc_valid_len)
@@ -99,30 +95,31 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     output_seq, attention_weight_seq = [], []
     for _ in range(num_steps):
         Y, dec_state = net.decoder(dec_X, dec_state)
-        # 我们使⽤具有预测最⾼可能性的词元，作为解码器在下⼀时间步的输⼊
+        # 我们使用具有预测最高可能性的词元，作为解码器在下一时间步的输入
         dec_X = Y.argmax(dim=2)
         pred = dec_X.squeeze(dim=0).type(torch.int32).item()
+        # 保存注意力权重（稍后讨论）
         if save_attention_weights:
             attention_weight_seq.append(net.decoder.attention_weights)
-        # ⼀旦序列结束词元被预测，输出序列的⽣成就完成了
+        # 一旦序列结束词元被预测，输出序列的生成就完成了
         if pred == tgt_vocab['<eos>']:
             break
         output_seq.append(pred)
     return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 
 
-def bleu(pred_seq, label_seq, k):
-    """计算BLEU"""
+def bleu(pred_seq, label_seq, k):  # @save
+    """计算 BLEU"""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
     len_pred, len_label = len(pred_tokens), len(label_tokens)
-    score = math.exp(min(0, 1 - len_pred / len_label))  # 惩罚过短的预测
+    score = math.exp(min(0, 1 - len_label / len_pred))
     for n in range(1, k + 1):
         num_matches, label_subs = 0, collections.defaultdict(int)
         for i in range(len_label - n + 1):
-            label_subs[' '.join(label_tokens[i:i + n])] += 1
+            label_subs[''.join(label_tokens[i: i + n])] += 1
         for i in range(len_pred - n + 1):
-            if label_subs[' '.join(pred_tokens[i: i + n])] > 0:
+            if label_subs[''.join(pred_tokens[i: i + n])] > 0:
                 num_matches += 1
-                label_subs[' '.join(pred_tokens[i: i + n])] -= 1
-        score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))  # 长匹配有高权重
+                label_subs[''.join(pred_tokens[i: i + n])] -= 1
+        score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
