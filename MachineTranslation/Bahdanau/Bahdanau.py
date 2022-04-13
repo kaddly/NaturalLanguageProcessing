@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from utils import AdditiveAttention, masked_softmax, sequence_mask
+from utils import AdditiveAttention
 
 
 class Encoder(nn.Module):
