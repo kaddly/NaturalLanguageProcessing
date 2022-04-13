@@ -72,17 +72,17 @@ class AttentionDecoder(Decoder):
         raise NotImplementedError
 
 
-class Seq2seqAttentionDecoder(AttentionDecoder):
+class Seq2SeqAttentionDecoder(AttentionDecoder):
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers, dropout=0, **kwargs):
-        super(Seq2seqAttentionDecoder, self).__init__(**kwargs)
+        super(Seq2SeqAttentionDecoder, self).__init__(**kwargs)
         self.attention = AdditiveAttention(num_hiddens, num_hiddens, num_hiddens, dropout)
         self.embedding = nn.Embedding(vocab_size, embed_size)
         self.rnn = nn.GRU(embed_size + num_hiddens, num_hiddens, num_layers, dropout=dropout)
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
     def init_state(self, enc_outputs, enc_valid_lens, *args):
-        # outputs的形状为(batch_size，num_steps，num_hiddens).
-        # hidden_state的形状为(num_layers，batch_size，num_hiddens)
+        # outputs的形状为(num_steps，batch_size，num_hiddens)
+        # hidden_state[0]的形状为(num_layers，batch_size，num_hiddens)
         outputs, hidden_state = enc_outputs
         return (outputs.permute(1, 0, 2), hidden_state, enc_valid_lens)
 
