@@ -3,6 +3,7 @@ import torch.nn as nn
 import time
 import math
 import collections
+from utils import truncate_pad
 
 
 def sequence_mask(X, valid_len, value=0):
@@ -61,6 +62,7 @@ def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
         for batch in data_iter:
             optimizer.zero_grad()
             X, X_valid_len, Y, Y_valid_len = [x.to(device) for x in batch]
+            print(X[0], X_valid_len[0], Y[0], Y_valid_len[0])
             bos = torch.tensor([tgt_vocab['<bos>']] * Y.shape[0], device=device).reshape(-1, 1)
             dec_input = torch.cat([bos, Y[:, :-1]], 1)  # 强制教学
             Y_hat, _ = net(X, dec_input, X_valid_len)
@@ -85,11 +87,7 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     net.eval()
     src_tokens = src_vocab[src_sentence.lower().split(' ')] + [src_vocab['<eos>']]
     enc_valid_len = torch.tensor([len(src_tokens)], device=device)
-    if enc_valid_len > num_steps:
-        src_tokens = src_tokens[:num_steps]
-        enc_valid_len = len(src_tokens)
-    else:
-        src_tokens += [src_vocab['<pad>']] * (num_steps - enc_valid_len)
+    src_tokens = truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
     # 添加批量轴
     enc_X = torch.unsqueeze(torch.tensor(src_tokens, dtype=torch.long, device=device), dim=0)
     enc_outputs = net.encoder(enc_X, enc_valid_len)

@@ -104,6 +104,12 @@ def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
 # source, target = tokenize_nmt(preprocess_nmt(read_data_nmt()))
 # show_list_len_pair_hist(['source', 'target'], '# tokens per sequence', 'count', source, target)
 # plt.show()
+def truncate_pad(line, num_steps, padding_token):
+    """截断或填充⽂本序列"""
+    if len(line) > num_steps:
+        return line[:num_steps]  # 截断
+    return line + [padding_token] * (num_steps - len(line))  # 填充
+
 
 class My_Dataset(Dataset):
     def __init__(self, min_freq=2, num_steps=10, num_examples=600):
@@ -119,18 +125,11 @@ class My_Dataset(Dataset):
 
     def __getitem__(self, item):
         src, tgt = self.src_lines[item], self.tgt_lines[item]
-        src_len, tgt_len = len(src), len(tgt)
-        if len(src) > self.num_steps:
-            src = src[:self.num_steps]
-            src_len = len(src)
-        else:
-            src += [self.src_vocab['<pad>']] * (self.num_steps - src_len)
-        if len(src) > self.num_steps:
-            tgt = tgt[:self.num_steps]
-            tgt_len = len(tgt)
-        else:
-            tgt += [self.tgt_vocab['<pad>']] * (self.num_steps - tgt_len)
-        return torch.tensor(src), torch.tensor(int(src_len)), torch.tensor(tgt), torch.tensor(int(tgt_len))
+        src = truncate_pad(src, self.num_steps, self.src_vocab['<pad>'])
+        src_len = (torch.tensor(src) != self.src_vocab['<pad>']).type(torch.int32).sum()
+        tgt = truncate_pad(src, self.num_steps, self.tgt_vocab['<pad>'])
+        tgt_len = (torch.tensor(tgt) != self.tgt_vocab['<pad>']).type(torch.int32).sum()
+        return torch.tensor(src), src_len, torch.tensor(tgt), tgt_len
 
     def get_vocab(self):
         return self.src_vocab, self.tgt_vocab
