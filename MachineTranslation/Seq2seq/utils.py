@@ -133,7 +133,5 @@ class My_Dataset(Dataset):
             tgt_len = self.num_steps
         return torch.tensor(src), torch.tensor(int(src_len)), torch.tensor(tgt), torch.tensor(int(tgt_len))
 
-
-def get_vocab(self):
+    def get_vocab(self):
         return self.src_vocab, self.tgt_vocab
-
