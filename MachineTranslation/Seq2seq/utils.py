@@ -104,11 +104,6 @@ def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
 # source, target = tokenize_nmt(preprocess_nmt(read_data_nmt()))
 # show_list_len_pair_hist(['source', 'target'], '# tokens per sequence', 'count', source, target)
 # plt.show()
-def truncate_pad(line, num_steps, padding_token):
-    """截断或填充⽂本序列"""
-    if len(line) > num_steps:
-        return line[:num_steps]  # 截断
-    return line + [padding_token] * (num_steps - len(line))  # 填充
 
 
 class My_Dataset(Dataset):
@@ -118,19 +113,27 @@ class My_Dataset(Dataset):
         self.src_vocab = Vocab(self.source, min_freq=min_freq, reserved_tokens=['<pad>', '<bos>', '<eos>'])
         self.tgt_vocab = Vocab(self.target, min_freq=min_freq, reserved_tokens=['<pad>', '<bos>', '<eos>'])
         self.src_lines = [self.src_vocab[l] + [self.src_vocab['<eos>']] for l in self.source]
-        self.tgt_lines = [self.src_vocab[l] + [self.src_vocab['<eos>']] for l in self.target]
+        self.tgt_lines = [self.tgt_vocab[l] + [self.tgt_vocab['<eos>']] for l in self.target]
 
     def __len__(self):
         return len(self.source)
 
     def __getitem__(self, item):
         src, tgt = self.src_lines[item], self.tgt_lines[item]
-        src = truncate_pad(src, self.num_steps, self.src_vocab['<pad>'])
-        src_len = (torch.tensor(src) != self.src_vocab['<pad>']).type(torch.int32).sum()
-        tgt = truncate_pad(src, self.num_steps, self.tgt_vocab['<pad>'])
-        tgt_len = (torch.tensor(tgt) != self.tgt_vocab['<pad>']).type(torch.int32).sum()
-        return torch.tensor(src), src_len, torch.tensor(tgt), tgt_len
+        src_len, tgt_len = len(src), len(tgt)
+        if self.num_steps > src_len:
+            src += [self.src_vocab['<pad>']] * (self.num_steps - src_len)
+        else:
+            src = src[:self.num_steps]
+            src_len = self.num_steps
+        if self.num_steps > tgt_len:
+            tgt += [self.tgt_vocab['<pad>']] * (self.num_steps - tgt_len)
+        else:
+            tgt = tgt[:self.num_steps]
+            tgt_len = self.num_steps
+        return torch.tensor(src), torch.tensor(int(src_len)), torch.tensor(tgt), torch.tensor(int(tgt_len))
 
-    def get_vocab(self):
+
+def get_vocab(self):
         return self.src_vocab, self.tgt_vocab
 

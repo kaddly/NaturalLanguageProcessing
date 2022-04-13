@@ -3,7 +3,6 @@ import torch.nn as nn
 import time
 import math
 import collections
-from utils import truncate_pad
 
 
 def sequence_mask(X, valid_len, value=0):
@@ -85,7 +84,11 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps, device, 
     net.eval()
     src_tokens = src_vocab[src_sentence.lower().split(' ')] + [src_vocab['<eos>']]
     enc_valid_len = torch.tensor([len(src_tokens)], device=device)
-    src_tokens = truncate_pad(src_tokens, num_steps, src_vocab['<pad>'])
+    if num_steps > enc_valid_len:
+        src_tokens += [src_vocab['<pad>']] * (num_steps - enc_valid_len)
+    else:
+        src_tokens = src_tokens[:num_steps]
+        enc_valid_len = num_steps
     # 添加批量轴
     enc_X = torch.unsqueeze(torch.tensor(src_tokens, dtype=torch.long, device=device), dim=0)
     enc_outputs = net.encoder(enc_X, enc_valid_len)

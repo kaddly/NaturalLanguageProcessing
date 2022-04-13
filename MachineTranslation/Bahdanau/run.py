@@ -10,7 +10,7 @@ if __name__ == '__main__':
     lr, num_epochs, device = 0.005, 250, torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     my_dataset = My_Dataset(num_steps=num_steps)
     src_vocab, tgt_vocab = my_dataset.get_vocab()
-    train_iter = DataLoader(my_dataset, batch_size=batch_size,shuffle=False)
+    train_iter = DataLoader(my_dataset, batch_size=batch_size, shuffle=True)
     encoder = Seq2SeqEncoder(len(src_vocab), embed_size, num_hiddens, num_layers, dropout)
     decoder = Seq2SeqAttentionDecoder(len(tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
     net = EncoderDecoder(encoder, decoder)
