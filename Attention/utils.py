@@ -136,7 +136,7 @@ class MultiHeadAttention(nn.Module):
         if valid_lens is not None:
             # 在轴0，将第⼀项（标量或者⽮量）复制num_heads次，
             # 然后如此复制第⼆项，然后诸如此类。
-            valid_len = torch.repeat_interleave(valid_lens, repeats=self.num_heads, dim=0)
+            valid_lens = torch.repeat_interleave(valid_lens, repeats=self.num_heads, dim=0)
 
         # output的形状:(batch_size*num_heads，查询的个数，
         # num_hiddens/num_heads)
