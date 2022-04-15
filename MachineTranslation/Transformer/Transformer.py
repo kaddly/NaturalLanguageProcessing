@@ -120,8 +120,7 @@ class MultiHeadAttention(nn.Module):
             # 然后如此复制第⼆项，然后诸如此类。
             valid_lens = torch.repeat_interleave(valid_lens, repeats=self.num_heads, dim=0)
 
-        # output的形状:(batch_size*num_heads，查询的个数，
-        # num_hiddens/num_heads)
+        # output的形状:(batch_size*num_heads，查询的个数，num_hiddens/num_heads)
         output = self.attention(queries, keys, values, valid_lens)
 
         # output_concat的形状:(batch_size，查询的个数，num_hiddens)
