@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math
+import pandas as pd
 
 
 def sequence_mask(X, valid_len, value=0):
@@ -144,3 +145,17 @@ class PositionalEncoding(nn.Module):
     def forward(self, X):
         X = X + self.P[:, :X.shape[1], :].to(X.device)
         return self.dropout(X)
+
+
+class PositionWiseFFN(nn.Module):
+    """基于位置的前馈网络"""
+
+    def __init__(self, ffn_num_input, ffn_num_hiddens, ffn_num_outputs, **kwargs):
+        super(PositionWiseFFN, self).__init__(**kwargs)
+        self.dense1 = nn.Linear(ffn_num_input, ffn_num_hiddens)
+        self.relu = nn.ReLU()
+        self.dense2 = nn.Linear(ffn_num_hiddens, ffn_num_outputs)
+
+    def forward(self, X):
+        return self.dense2(self.relu(self.dense1(X)))
+
