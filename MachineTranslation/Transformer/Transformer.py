@@ -4,6 +4,43 @@ import math
 import pandas as pd
 
 
+class Encoder(nn.Module):
+    """编码器-解码器架构的基本编码器接⼝"""
+
+    def __init__(self, **kwargs):
+        super(Encoder, self).__init__(**kwargs)
+
+    def forward(self, X, *args):
+        raise NotImplementedError
+
+
+class Decoder(nn.Module):
+    """编码器-解码器架构的基本解码器接⼝"""
+
+    def __init__(self, **kwargs):
+        super(Decoder, self).__init__(**kwargs)
+
+    def init_state(self, enc_outputs, *args):
+        raise NotImplementedError
+
+    def forward(self, X, state):
+        raise NotImplementedError
+
+
+class EncoderDecoder(nn.Module):
+    """编码器-解码器架构的基类"""
+
+    def __init__(self, encoder, decoder, **kwargs):
+        super(EncoderDecoder, self).__init__(**kwargs)
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def forward(self, enc_X, dec_X, *args):
+        enc_outputs = self.encoder(enc_X)
+        dec_state = self.decoder.init_state(enc_outputs, *args)
+        return self.decoder(dec_X, dec_state)
+
+
 def sequence_mask(X, valid_len, value=0):
     """在序列中屏蔽不相关的项"""
     maxlen = X.size(1)
@@ -162,6 +199,7 @@ class PositionWiseFFN(nn.Module):
 
 class AddNorm(nn.Module):
     """残差连接后进⾏层规范化"""
+
     def __init__(self, normalized_shape, dropout, **kwargs):
         super(AddNorm, self).__init__(**kwargs)
         self.dropout = nn.Dropout(dropout)
@@ -169,3 +207,47 @@ class AddNorm(nn.Module):
 
     def forward(self, X, Y):
         return self.ln(self.dropout(Y) + X)
+
+
+class EncoderBlock(nn.Module):
+    """transformer编码块"""
+
+    def __init__(self, key_size, query_size, value_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens,
+                 num_heads, dropout, use_bias=False, **kwargs):
+        super(EncoderBlock, self).__init__(**kwargs)
+        self.attention = MultiHeadAttention(key_size, query_size, value_size, num_hiddens, num_heads, dropout, use_bias)
+        self.addnorm1 = AddNorm(norm_shape, dropout)
+        self.ffn = PositionWiseFFN(ffn_num_input, ffn_num_hiddens, num_hiddens)
+        self.addnorm2 = AddNorm(norm_shape, dropout)
+
+    def forward(self, X, valid_lens):
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
+        return self.addnorm2(Y, self.ffn(Y))
+
+
+class TransformerEncoder(Encoder):
+    """transformer编码器"""
+
+    def __init__(self, vocab_size, key_size, query_size, value_size, num_hiddens, norm_shape, ffn_num_input,
+                 ffn_num_hiddens, num_heads, num_layers, dropout, use_bias=False, **kwargs):
+        super(TransformerEncoder, self).__init__(**kwargs)
+        self.num_hiddens = num_hiddens
+        self.embedding = nn.Embedding(vocab_size, num_hiddens)
+        self.pos_encoding = PositionalEncoding(num_hiddens, dropout)
+        self.blks = nn.Sequential()
+
+        for i in range(num_layers):
+            self.blks.add_module("block" + str(i),
+                                 EncoderBlock(key_size, query_size, value_size, num_hiddens, norm_shape, ffn_num_input,
+                                              ffn_num_hiddens, num_heads, dropout, use_bias))
+
+    def forward(self, X, valid_len, *args):
+        # 因为位置编码值在-1和1之间，
+        # 因此嵌⼊值乘以嵌⼊维度的平⽅根进⾏缩放，
+        # 然后再与位置编码相加。
+        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+        self.attention_weights = [None] * len(self.blks)
+        for i, blk in enumerate(self.blks):
+            X = blk(X, valid_len)
+            self.attention_weights[i] = blk.attention.attention.attention_weights
+        return X
