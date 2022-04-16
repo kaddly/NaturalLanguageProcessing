@@ -317,7 +317,7 @@ class TransformerDecoder(AttentionDecoder):
         for i in range(num_layers):
             self.blks.add_module("block" + str(i),
                                  DecoderBlock(key_size, query_size, value_size, num_hiddens, norm_shape, ffn_num_input,
-                                              ffn_num_hiddens, num_heads, dropout))
+                                              ffn_num_hiddens, num_heads, dropout, i))
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
     def init_state(self, enc_outputs, enc_valid_lens, *args):
