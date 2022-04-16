@@ -255,7 +255,7 @@ class TransformerEncoder(Encoder):
         # 因为位置编码值在-1和1之间，
         # 因此嵌⼊值乘以嵌⼊维度的平⽅根进⾏缩放，
         # 然后再与位置编码相加。
-        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))  # dim越大embedding越小
         self.attention_weights = [None] * len(self.blks)
         for i, blk in enumerate(self.blks):
             X = blk(X, valid_len)
@@ -263,12 +263,12 @@ class TransformerEncoder(Encoder):
         return X
 
 
-class DecoderBLock(nn.Module):
+class DecoderBlock(nn.Module):
     """解码器中第i个块"""
 
     def __init__(self, key_size, query_size, values_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens,
                  num_heads, dropout, i, **kwargs):
-        super(DecoderBLock, self).__init__(**kwargs)
+        super(DecoderBlock, self).__init__(**kwargs)
         self.i = i
         self.attention1 = MultiHeadAttention(key_size, query_size, values_size, num_hiddens, num_heads, dropout)
         self.addnorm1 = AddNorm(norm_shape, dropout)
@@ -316,7 +316,7 @@ class TransformerDecoder(AttentionDecoder):
         self.blks = nn.Sequential()
         for i in range(num_layers):
             self.blks.add_module("block" + str(i),
-                                 DecoderBLock(key_size, query_size, value_size, num_hiddens, norm_shape, ffn_num_input,
+                                 DecoderBlock(key_size, query_size, value_size, num_hiddens, norm_shape, ffn_num_input,
                                               ffn_num_hiddens, num_heads, dropout))
         self.dense = nn.Linear(num_hiddens, vocab_size)
 
