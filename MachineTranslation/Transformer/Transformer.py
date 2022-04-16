@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import math
-import d2l.torch
+
 
 class Encoder(nn.Module):
     """编码器-解码器架构的基本编码器接⼝"""
@@ -69,7 +69,7 @@ def masked_softmax(X, valid_lens):
         if valid_lens.dim() == 1:
             valid_lens = torch.repeat_interleave(valid_lens, shape[1])
         else:
-            valid_lens = valid_lens.shape(-1)
+            valid_lens = valid_lens.reshape(-1)
         # 最后⼀轴上被掩蔽的元素使⽤⼀个⾮常⼤的负值替换，从⽽其softmax输出为0
         X = sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
         return nn.functional.softmax(X.reshape(shape), dim=-1)
@@ -302,7 +302,7 @@ class DecoderBlock(nn.Module):
         # enc_outputs的开头:(batch_size,num_steps,num_hiddens)
         Y2 = self.attention2(Y, enc_outputs, enc_outputs, enc_valid_lens)
         Z = self.addnorm2(Y, Y2)
-        return self.addnorm3(Z, Y2), state
+        return self.addnorm3(Z, self.ffn(Z)), state
 
 
 class TransformerDecoder(AttentionDecoder):
