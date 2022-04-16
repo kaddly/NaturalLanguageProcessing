@@ -335,5 +335,6 @@ class TransformerDecoder(AttentionDecoder):
 
         return self.dense(X), state
 
+    @property
     def attention_weights(self):
         return self._attention_weights
