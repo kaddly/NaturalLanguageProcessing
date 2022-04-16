@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import math
-
+import d2l.torch
 
 class Encoder(nn.Module):
     """编码器-解码器架构的基本编码器接⼝"""
@@ -35,7 +35,7 @@ class EncoderDecoder(nn.Module):
         self.decoder = decoder
 
     def forward(self, enc_X, dec_X, *args):
-        enc_outputs = self.encoder(enc_X)
+        enc_outputs = self.encoder(enc_X, *args)
         dec_state = self.decoder.init_state(enc_outputs, *args)
         return self.decoder(dec_X, dec_state)
 
