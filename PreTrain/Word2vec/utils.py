@@ -110,3 +110,41 @@ def get_centers_and_contexts(corpus, max_window_size):
             indices.remove(i)
             context.append([line[idx] for idx in indices])
     return centers, context
+
+
+class RandomGenerator:
+    """根据n个采样权重在{1,...,n}中随机抽取"""
+
+    def __init__(self, sample_weights):
+        # Exclude
+        self.population = list(range(1, len(sample_weights) + 1))
+        self.sample_weights = sample_weights
+        self.candidates = []
+        self.i = 0
+
+    def draw(self):
+        if self.i == len(self.candidates):
+            # 缓存k个随机采样结果
+            self.candidates = random.choices(self.population, self.sampling_weights, k=10000)
+            self.i = 0
+        self.i += 1
+        return self.candidates[self.i - 1]
+
+
+# generator = RandomGenerator([2, 3, 4])
+# print([generator.draw() for _ in range(10)])
+
+def get_negative(all_contexts, vocab, counter, K):
+    """返回负采样中的噪声词"""
+    # 索引为1、2、...（索引0是词表中排除的未知标记）
+    sampling_weights = [counter[vocab.to_tokens(i)] ** 0.75 for i in range(1, len(vocab))]
+    all_negatives, generator = [], RandomGenerator(sampling_weights)
+    for contexts in all_contexts:
+        negatives = []
+        while len(negatives) < len(contexts) * K:
+            neg = generator.draw()
+            # 噪声词不能是上下⽂词
+            if neg not in contexts:
+                negatives.append(neg)
+        all_negatives.append(negatives)
+    return all_negatives
