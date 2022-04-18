@@ -9,10 +9,9 @@ def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
     return pred
 
 
-class Word2vec(nn.Module):
+class word2vec(nn.Module):
     def __init__(self, vocab_size, embed_size):
-        self.v_embedding = nn.Embedding(vocab_size, embed_size)
-        self.u_embedding = nn.Embedding(vocab_size, embed_size)
+        self.net = nn.Sequential(nn.Embedding(vocab_size, embed_size), nn.Embedding(vocab_size, embed_size))
 
     def forward(self, center, context_negative):
-        return skip_gram(center, context_negative, self.v_embedding, self.u_embedding)
+        return skip_gram(center, context_negative, self.net[0], self.net[1])
