@@ -115,10 +115,10 @@ def get_centers_and_contexts(corpus, max_window_size):
 class RandomGenerator:
     """根据n个采样权重在{1,...,n}中随机抽取"""
 
-    def __init__(self, sample_weights):
+    def __init__(self, sampling_weights):
         # Exclude
-        self.population = list(range(1, len(sample_weights) + 1))
-        self.sample_weights = sample_weights
+        self.population = list(range(1, len(sampling_weights) + 1))
+        self.sampling_weights = sampling_weights
         self.candidates = []
         self.i = 0
 
@@ -168,7 +168,6 @@ def batchify(data):
 
 def load_data_ptb(batch_size, max_window_size, num_noise_words):
     """下载PTB数据集，然后将其加载到内存中"""
-    num_workers = 4
     sentences = read_ptb()
     vocab = Vocab(sentences, min_freq=10)
     subsampled, counter = subsample(sentences, vocab)
@@ -186,10 +185,9 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
         def __getitem__(self, item):
             return (self.centers[item], self.negatives[item], self.contexts[item])
 
-        def len(self):
+        def __len__(self):
             return len(self.centers)
 
     dataset = PTBDataset(all_centers, all_contexts, all_negatives)
-    data_iter = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True, collate_fn=batchify,
-                                            num_workers=num_workers)
+    data_iter = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True, collate_fn=batchify)
     return data_iter, vocab
