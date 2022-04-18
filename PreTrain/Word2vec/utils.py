@@ -148,3 +148,48 @@ def get_negative(all_contexts, vocab, counter, K):
                 negatives.append(neg)
         all_negatives.append(negatives)
     return all_negatives
+
+
+def batchify(data):
+    """返回带有负采样的跳元模型的⼩批量样本"""
+    max_len = max(len(c) + len(n) for _, c, n in data)
+    centers, contexts_negatives, masks, labels = [], [], [], []
+    for center, context, negative in data:
+        cur_len = len(context) + len(negative)
+        centers += [center]
+        contexts_negatives += [context + negative + [0] * (max_len - cur_len)]
+        masks += [[1] * cur_len + [0] * (max_len - cur_len)]
+        labels += [[1] * len(context) + [0] * (max_len - len(context))]
+    return (torch.tensor(centers).reshape((-1, 1))
+            , torch.tensor(contexts_negatives)
+            , torch.tensor(masks)
+            , torch.tensor(labels))
+
+
+def load_data_ptb(batch_size, max_window_size, num_noise_words):
+    """下载PTB数据集，然后将其加载到内存中"""
+    num_workers = 4
+    sentences = read_ptb()
+    vocab = Vocab(sentences, min_freq=10)
+    subsampled, counter = subsample(sentences, vocab)
+    corpus = [vocab[line] for line in subsampled]
+    all_centers, all_contexts = get_centers_and_contexts(corpus, max_window_size)
+    all_negatives = get_negative(all_contexts, vocab, counter, num_noise_words)
+
+    class PTBDataset(Dataset):
+        def __init__(self, centers, contexts, negatives):
+            assert len(centers) == len(contexts) == len(negatives)
+            self.centers = centers
+            self.contexts = contexts
+            self.negatives = negatives
+
+        def __getitem__(self, item):
+            return (self.centers[item], self.negatives[item], self.contexts[item])
+
+        def len(self):
+            return len(self.centers)
+
+    dataset = PTBDataset(all_centers, all_contexts, all_negatives)
+    data_iter = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True, collate_fn=batchify,
+                                            num_workers=num_workers)
+    return data_iter, vocab
