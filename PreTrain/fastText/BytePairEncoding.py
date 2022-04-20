@@ -36,3 +36,26 @@ for i in range(num_merges):
     print(f'合并# {i + 1}:', max_freq_pair)
 
 print(symbols)
+
+
+def segment_BPE(tokens, symbols):
+    outputs = []
+    for token in tokens:
+        start, end = 0, len(token)
+        cur_output = []
+        # 具有符号中可能最长子词的词片段
+        while start < len(token) and start < end:
+            if token[start:end] in symbols:
+                cur_output.append(token[start:end])
+                start = end
+                end = len(token)
+            else:
+                end -= 1
+        if start < len(token):
+            cur_output.append('[UNK]')
+        outputs.append(' '.join(cur_output))
+    return outputs
+
+
+tokens = ['tallest_', 'fatter_']
+print(segment_BPE(tokens, symbols))
