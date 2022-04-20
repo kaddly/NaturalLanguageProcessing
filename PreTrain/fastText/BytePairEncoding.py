@@ -36,6 +36,7 @@ for i in range(num_merges):
     print(f'合并# {i + 1}:', max_freq_pair)
 
 print(symbols)
+print(list(token_freqs.keys()))
 
 
 def segment_BPE(tokens, symbols):
