@@ -229,5 +229,35 @@ class MaskLM(nn.Module):
 
 class NextSentencePred(nn.Module):
     """BERT的下⼀句预测任务"""
-    def __init__(self):
-        pass
+
+    def __init__(self, num_inputs, **kwargs):
+        super(NextSentencePred, self).__init__(**kwargs)
+        self.output = nn.Linear(num_inputs, 2)
+
+    def forward(self, X):
+        # X的形状：(batch_size,num_hiddens)
+        return self.output(X)
+
+
+class BERTModel(nn.Module):
+    """BERT模型"""
+
+    def __init__(self, vocab_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_heads, num_layers,
+                 dropout, max_len=1000, key_size=768, query_size=768, value_size=768, hid_in_features=768,
+                 mlm_in_features=768, nsp_in_features=768):
+        super(BERTModel, self).__init__()
+        self.encoder = BERTEncoder(vocab_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
+                                   num_layers, dropout, max_len, key_size, query_size, value_size)
+        self.hidden = nn.Sequential(nn.Linear(hid_in_features, num_hiddens), nn.Tanh())
+
+        self.mlm = MaskLM(vocab_size, num_hiddens, mlm_in_features)
+        self.nsp = NextSentencePred(nsp_in_features)
+
+    def forward(self, tokens, segments, valid_len=None, pred_positions=None):
+        encoded_X = self.encoder(tokens, segments, valid_len)
+        if pred_positions is not None:
+            mlm_y_hat = self.mlm(encoded_X, pred_positions)
+        else:
+            mlm_y_hat = None
+        nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, 0, :]))
+        return encoded_X, mlm_y_hat, nsp_Y_hat
