@@ -14,7 +14,7 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X, segments_X, valid_lens
     # 计算下⼀句⼦预测任务的损失
     nsp_l = loss(nsp_Y_hat, nsp_y)
     l = mlm_l + nsp_l
-    return mlm_l, nsp_l,
+    return mlm_l, nsp_l, l
 
 
 def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):

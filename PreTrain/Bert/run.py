@@ -21,3 +21,11 @@ if __name__ == '__main__':
     encoded_text_cls = encoded_text[:, 0, :]
     encoded_text_crane = encoded_text[:, 2, :]
     print(encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3])
+    # BERT表⽰是上下⽂敏感的
+    tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
+    encoded_pair = get_bert_encoding(net, vocab, devices, tokens_a, tokens_b)
+    # 词元：'<cls>','a','crane','driver','came','<sep>','he','just', 'left','<sep>'
+    encoded_pair_cls = encoded_pair[:, 0, :]
+    encoded_pair_crane = encoded_pair[:, 2, :]
+    print(encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3])
+
