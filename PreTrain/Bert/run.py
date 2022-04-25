@@ -28,4 +28,3 @@ if __name__ == '__main__':
     encoded_pair_cls = encoded_pair[:, 0, :]
     encoded_pair_crane = encoded_pair[:, 2, :]
     print(encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3])
-
