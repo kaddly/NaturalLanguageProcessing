@@ -10,7 +10,8 @@ def accuracy(y_hat, y):
     if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
         y_hat = torch.argmax(y_hat, axis=1)
     cmp = y_hat.to(dtype=y.dtype) == y
-    return float(sum(cmp)/len(cmp))
+    cmp = cmp.to(dtype=y.dtype)
+    return float(cmp.sum())
 
 
 def evaluate_accuracy_gpu(net, data_iter, device=None):
@@ -81,10 +82,9 @@ def train_sentiment(net, train_iter, test_iter, loss, trainer, num_epochs, devic
         ls, accs, batch_num, labels_num = 0, 0, 0, 0
         for i, (features, labels) in enumerate(train_iter):
             tik = time.time()
-            l, acc = train_batch_sentiment(
-                net, features, labels, loss, trainer, devices)
+            l, acc = train_batch_sentiment(net, features, labels, loss, trainer, devices)
             ls += l
-            acc += acc
+            accs += acc
             batch_num += labels.shape[0]
             labels_num += labels.numel()
             timer.append(time.time() - tik)
@@ -92,11 +92,11 @@ def train_sentiment(net, train_iter, test_iter, loss, trainer, num_epochs, devic
                 print(f'epoch:{epoch + 1}>>'
                       f'step:{i + 1}>>'
                       f'loss:{ls / batch_num:.3f}>>'
-                      f'train acc:{acc / labels_num:.3f}')
+                      f'train acc:{accs / labels_num:.3f}')
         test_acc = evaluate_accuracy_gpu(net, test_iter)
-        print(f'epoch:{epoch + 1}>>test_acc:{test_acc}')
+        print(f'epoch:{epoch + 1}>>test_acc:{test_acc:.3f}')
     print(f'loss {ls / batch_num:.3f}, train acc '
-          f'{acc / labels_num:.3f}, test acc {test_acc:.3f}')
+          f'{accs / labels_num:.3f}, test acc {test_acc:.3f}')
     print(f'{batch_num * num_epochs / sum(timer):.1f} examples/sec on '
           f'{str(devices)}')
 
