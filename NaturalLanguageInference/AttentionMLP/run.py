@@ -19,4 +19,4 @@ if __name__ == '__main__':
     trainer = torch.optim.Adam(params=net.parameters(), lr=lr)
     loss = nn.CrossEntropyLoss(reduction='none')
     train_snli(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
-    predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
+    predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'], devices[0])
