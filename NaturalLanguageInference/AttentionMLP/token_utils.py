@@ -83,7 +83,7 @@ class TokenEmbedding:
 
     def _load_embedding(self, embedding_name):
         idx_to_token, idx_to_vec = ['<unk>'], []
-        data_dir = '../WordEmbedding/' + embedding_name
+        data_dir = '../../SentimentAnalysis/WordEmbedding/' + embedding_name
         # GloVe⽹站：https://nlp.stanford.edu/projects/glove/
         # fastText⽹站：https://fasttext.cc/
         with open(os.path.join(data_dir, 'vec.txt'), 'r', encoding='UTF-8') as f:
