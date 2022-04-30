@@ -1,8 +1,9 @@
+import multiprocessing
 import os
 import re
 import torch
-from torch.utils.data import Dataset, DataLoader
-from token_utils import Vocab, tokenize, truncate_pad
+from torch.utils.data import Dataset
+from token_utils import Vocab, tokenize, truncate_pad, get_tokens_and_segments
 
 
 def read_snli(data_dir, is_train):
@@ -26,40 +27,44 @@ def read_snli(data_dir, is_train):
     return premises, hypotheses, labels
 
 
-class SNLIDataset(Dataset):
-    """⽤于加载SNLI数据集的⾃定义数据集"""
-
-    def __init__(self, dataset, num_steps, vocab=None):
-        self.num_steps = num_steps
-        all_premise_tokens = tokenize(dataset[0])
-        all_hypothesis_tokens = tokenize(dataset[1])
-        if vocab is None:
-            self.vocab = Vocab(all_premise_tokens + all_hypothesis_tokens, min_freq=5, reserved_tokens=['<pad>'])
-        else:
-            self.vocab = vocab
-        self.premises = self._pad(all_premise_tokens)
-        self.hypotheses = self._pad(all_hypothesis_tokens)
+class SNLIBERTDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset, max_len, vocab=None):
+        all_premise_hypothesis_tokens = [[p_tokens, h_tokens] for p_tokens, h_tokens in zip(*[tokenize([s.lower() for s in sentences])for sentences in dataset[:2]])]
         self.labels = torch.tensor(dataset[2])
-        print('read ' + str(len(self.premises)) + ' examples')
+        self.vocab = vocab
+        self.max_len = max_len
+        (self.all_token_ids, self.all_segments, self.valid_lens) = self._preprocess(all_premise_hypothesis_tokens)
+        print('read ' + str(len(self.all_token_ids)) + ' examples')
 
-    def _pad(self, lines):
-        return torch.tensor([truncate_pad(self.vocab[line], self.num_steps, self.vocab['<pad>']) for line in lines])
+    def _preprocess(self, all_premise_hypothesis_tokens):
+        pool = multiprocessing.Pool(4)  # 使⽤4个进程
+        out = pool.map(self._mp_worker, all_premise_hypothesis_tokens)
+        all_token_ids = [token_ids for token_ids, segments, valid_len in out]
+        all_segments = [segments for token_ids, segments, valid_len in out]
+        valid_lens = [valid_len for token_ids, segments, valid_len in out]
+        return (torch.tensor(all_token_ids, dtype=torch.long),
+                torch.tensor(all_segments, dtype=torch.long),
+                torch.tensor(valid_lens))
+
+    def _mp_worker(self, premise_hypothesis_tokens):
+        p_tokens, h_tokens = premise_hypothesis_tokens
+        self._truncate_pair_of_tokens(p_tokens, h_tokens)
+        tokens, segments = get_tokens_and_segments(p_tokens, h_tokens)
+        token_ids = self.vocab[tokens] + [self.vocab['<pad>']] * (self.max_len - len(tokens))
+        segments = segments + [0] * (self.max_len - len(segments))
+        valid_len = len(tokens)
+        return token_ids, segments, valid_len
+
+    def _truncate_pair_of_tokens(self, p_tokens, h_tokens):
+        # 为BERT输⼊中的'<CLS>'、'<SEP>'和'<SEP>'词元保留位置
+        while len(p_tokens) + len(h_tokens) > self.max_len - 3:
+            if len(p_tokens) > len(h_tokens):
+                p_tokens.pop()
+            else:
+                h_tokens.pop()
 
     def __getitem__(self, idx):
-        return (self.premises[idx], self.hypotheses[idx]), self.labels[idx]
+        return (self.all_token_ids[idx], self.all_segments[idx], self.valid_lens[idx]), self.labels[idx]
 
     def __len__(self):
-        return len(self.premises)
-
-
-def load_data_snli(batch_size, num_steps=50):
-    """下载SNLI数据集并返回数据迭代器和词表"""
-    # num_workers = 4
-    data_dir = '../data/snli_1.0/'
-    train_data = read_snli(data_dir, True)
-    test_data = read_snli(data_dir, False)
-    train_set = SNLIDataset(train_data, num_steps)
-    train_iter = DataLoader(train_set, batch_size, shuffle=True)
-    test_set = SNLIDataset(test_data, num_steps, train_set.vocab)
-    test_iter = DataLoader(test_set, batch_size, shuffle=False)
-    return train_iter, test_iter, train_set.vocab
+        return len(self.all_token_ids)
