@@ -9,10 +9,10 @@ if __name__ == '__main__':
     devices = [torch.device(f'cuda:{i}') for i in range(torch.cuda.device_count())]
     devices = devices if devices else [torch.device('cpu')]
     bert, vocab = load_pretrained_model(
-        'bert.small.torch', num_hiddens=256, ffn_num_hiddens=512, num_heads=4,
-        num_layers=2, dropout=0.1, max_len=512, devices=devices)
+        'bert.base.torch', num_hiddens=768, ffn_num_hiddens=3072, num_heads=12,
+        num_layers=12, dropout=0.1, max_len=512, devices=devices)
     # 如果出现显存不⾜错误，请减少“batch_size”。在原始的BERT模型中，max_len=512
-    batch_size, max_len, num_workers = 512, 128, 2
+    batch_size, max_len, num_workers = 512, 128, 4
     data_dir = '../data/snli_1.0/'
     train_set = SNLIBERTDataset(read_snli(data_dir, True), max_len, vocab)
     test_set = SNLIBERTDataset(read_snli(data_dir, False), max_len, vocab)

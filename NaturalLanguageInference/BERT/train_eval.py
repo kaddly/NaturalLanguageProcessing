@@ -64,16 +64,16 @@ def train_snli(net, train_iter, test_iter, loss, trainer, num_epochs, devices):
 
     Defined in :numref:`sec_image_augmentation`"""
 
-    def init_weights(m):
-        if type(m) == nn.Linear:
-            nn.init.xavier_uniform_(m.weight)
+    # def init_weights(m):
+    #     if type(m) == nn.Linear:
+    #         nn.init.xavier_uniform_(m.weight)
+    #
+    #     if type(m) == nn.LSTM:
+    #         for param in m._flat_weights_names:
+    #             if "weight" in param:
+    #                 nn.init.xavier_uniform_(m._parameters[param])
 
-        if type(m) == nn.LSTM:
-            for param in m._flat_weights_names:
-                if "weight" in param:
-                    nn.init.xavier_uniform_(m._parameters[param])
-
-    net.apply(init_weights)
+    # net.apply(init_weights)
     timer, num_batches = [], len(train_iter)
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
     for epoch in range(num_epochs):
