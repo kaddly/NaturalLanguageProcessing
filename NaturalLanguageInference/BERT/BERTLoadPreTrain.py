@@ -3,7 +3,7 @@ import os
 import torch
 from torch import nn
 from token_utils import Vocab
-from BERT import BERTModel
+from Bert import BERTModel
 
 
 def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
@@ -14,7 +14,7 @@ def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
     vocab.idx_to_token = json.load(open(os.path.join(data_dir, 'vocab.json')))
     vocab.token_to_idx = {token: idx for idx, token in enumerate(vocab.idx_to_token)}
     bert = BERTModel(len(vocab), num_hiddens, norm_shape=[256], ffn_num_input=256, ffn_num_hiddens=ffn_num_hiddens,
-                     num_heads=4, num_layers=2, dropout=0.2, max_len=max_len, key_size=256, query_size=256,
+                     num_heads=num_heads, num_layers=num_layers, dropout=dropout, max_len=max_len, key_size=256, query_size=256,
                      value_size=256, hid_in_features=256, mlm_in_features=256, nsp_in_features=256)
     # 加载预训练BERT参数
     bert.load_state_dict(torch.load(os.path.join(data_dir, 'pretrained.params')))
