@@ -6,7 +6,7 @@ import numpy as np
 
 class RNNModel(nn.Module):
     def __init__(self, run_layer, vocab_size, **kwargs):
-        super(RNNModel, self).__init__()
+        super(RNNModel, self).__init__(**kwargs)
         self.rnn = run_layer
         self.vocab_size = vocab_size
         self.num_hiddens = self.rnn.hidden_size
