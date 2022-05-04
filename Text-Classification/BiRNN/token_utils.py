@@ -1,6 +1,7 @@
 import os
 import torch
 import collections
+import jieba
 
 
 def tokenize(lines, token='word'):
@@ -8,6 +9,8 @@ def tokenize(lines, token='word'):
         return [line.split() for line in lines]
     elif token == 'char':
         return [list(line) for line in lines]
+    elif token == 'ChineseWord':
+        return [jieba.lcut(line, cut_all=False) for line in lines]
     else:
         print("未知类型：" + token)
 
