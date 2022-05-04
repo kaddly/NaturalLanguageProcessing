@@ -7,7 +7,7 @@ class BiRNN(nn.Module):
         super(BiRNN, self).__init__(**kwargs)
         self.embedding = nn.Embedding(vocab_size, embed_size)
         self.encoder = nn.LSTM(embed_size, num_hiddens, num_layers=num_layer, bidirectional=True)
-        self.decoder = nn.Linear(4 * num_hiddens, 2)
+        self.decoder = nn.Linear(4 * num_hiddens, 10)
 
     def forward(self, inputs):
         # inputs的形状是（批量⼤⼩，时间步数）
