@@ -32,7 +32,7 @@ def evaluate_accuracy_gpu(net, data_iter, device=None):
     # No. of correct predictions, no. of predictions
 
     with torch.no_grad():
-        acc, nums, loss = 0, 0, 0
+        acc, loss = [], []
         for X, y in data_iter:
             if isinstance(X, list):
                 # Required for BERT Fine-tuning (to be covered later)
@@ -41,10 +41,9 @@ def evaluate_accuracy_gpu(net, data_iter, device=None):
                 X = X.to(device)
             y = y.to(device)
             y_hat = net(X)
-            acc += accuracy(y_hat, y)
-            loss += F.cross_entropy(y_hat, y)
-            nums += 1
-    return acc / nums, loss / nums
+            acc.append(accuracy(y_hat, y))
+            loss.append(F.cross_entropy(y_hat, y))
+    return sum(acc) / len(acc), sum(loss) / len(loss)
 
 
 def train(model, train_iter, dev_iter, test_iter, loss, devices, lr, num_epochs):
@@ -122,12 +121,20 @@ def test(model, test_iter):
 
 
 def evaluate(model, data_iter, test=False):
-    model.eval()
+    if isinstance(model, nn.Module):
+        model.eval()  # Set the model to evaluation mode
+        device = next(iter(model.parameters())).device
     loss_total = 0
     predict_all = np.array([], dtype=int)
     labels_all = np.array([], dtype=int)
     with torch.no_grad():
         for texts, labels in data_iter:
+            if isinstance(texts, list):
+                # Required for BERT Fine-tuning (to be covered later)
+                texts = [text.to(device) for text in texts]
+            else:
+                texts = texts.to(device)
+            labels = labels.to(device)
             outputs = model(texts)
             loss = F.cross_entropy(outputs, labels)
             loss_total += loss
