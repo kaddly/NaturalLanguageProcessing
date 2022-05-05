@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 if __name__ == '__main__':
 
-    dataset = 'THUCNews'  # 数据集
+    dataset = '../data/THUCNews'  # 数据集
 
     # train_test_split(dataset)
 
