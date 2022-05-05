@@ -43,7 +43,7 @@ def evaluate_accuracy_gpu(net, data_iter, device=None):
             y_hat = net(X)
             acc += accuracy(y_hat, y)
             loss += F.cross_entropy(y_hat, y)
-            nums += len(y)
+            nums += 1
     return acc / nums, loss / nums
 
 
@@ -76,7 +76,7 @@ def train(model, train_iter, dev_iter, test_iter, loss, devices, lr, num_epochs)
             outputs = model(trains)
             model.zero_grad()
             l = loss(outputs, labels)
-            l.backword()
+            l.backward()
             optimizer.step()
             if total_batch % 50 == 0:
                 # 每多少轮输出在训练集和验证集上的效果
@@ -91,7 +91,7 @@ def train(model, train_iter, dev_iter, test_iter, loss, devices, lr, num_epochs)
                     improve = ''
                 time_dif = timedelta(seconds=int(round(time.time() - start_time)))
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
-                print(msg.format(total_batch, loss.item(), train_acc, dev_loss, dev_acc, time_dif, improve))
+                print(msg.format(total_batch, l.item(), train_acc, dev_loss, dev_acc, time_dif, improve))
 
                 model.train()
             total_batch += 1

@@ -3,7 +3,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from token_utils import Vocab, tokenize, truncate_pad
 
 
-def read_YHUCNews(data_dir, is_train):
+def read_YHUCNews(data_dir):
     contents, targets = [], []
     with open(data_dir, 'r', encoding='UTF-8') as f:
         for line in f:  # 读取每行的数据
