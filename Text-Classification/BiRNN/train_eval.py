@@ -94,7 +94,7 @@ def train(model, train_iter, dev_iter, test_iter, loss, devices, lr, num_epochs)
 
                 model.train()
             total_batch += 1
-            if total_batch - last_improve > 1000:
+            if total_batch - last_improve > 2000:
                 # 验证集loss超过1000batch没下降，结束训练
                 print("No optimization for a long time, auto-stopping...")
                 flag = True
