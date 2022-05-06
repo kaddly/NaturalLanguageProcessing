@@ -13,6 +13,6 @@ if __name__ == '__main__':
     train_iter, test_iter, dev_iter, vocab = load_data_THUCNews(batch_size, num_step)
     loss = nn.CrossEntropyLoss()
     lr = 1e-3
-    embed_size, num_hiddens, num_layers = 100, 100, 2
+    embed_size, num_hiddens, num_layers = 300, 128, 2
     model = BiRNN(len(vocab), embed_size, num_hiddens, num_layers)
     train(model, train_iter, dev_iter, test_iter, loss, devices, lr, num_epochs)

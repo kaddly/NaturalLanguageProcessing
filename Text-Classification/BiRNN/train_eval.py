@@ -10,6 +10,18 @@ save_path = './saved_dict/'  # 模型训练结果
 class_list = [x.strip() for x in open('../data/THUCNews/data/class.txt', encoding='utf-8').readlines()]  # 类别名单
 
 
+def grad_clipping(net, theta):  # @save
+    """裁剪梯度"""
+    if isinstance(net, nn.Module):
+        params = [p for p in net.parameters() if p.requires_grad]
+    else:
+        params = net.params
+    norm = torch.sqrt(sum(torch.sum((p.grad ** 2)) for p in params))
+    if norm > theta:
+        for param in params:
+            param.grad[:] *= theta / norm
+
+
 def accuracy(y_hat, y):
     """Compute the number of correct predictions.
 
@@ -76,6 +88,7 @@ def train(model, train_iter, dev_iter, test_iter, loss, devices, lr, num_epochs)
             model.zero_grad()
             l = loss(outputs, labels)
             l.backward()
+            grad_clipping(model, 1)
             optimizer.step()
             if total_batch % 50 == 0:
                 # 每多少轮输出在训练集和验证集上的效果
