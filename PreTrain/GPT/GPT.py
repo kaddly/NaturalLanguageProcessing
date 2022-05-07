@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import math
 
+
 def sequence_mask(X, valid_len, value=0):
     """在序列中屏蔽不相关的项"""
     maxlen = X.size(1)
@@ -170,7 +171,9 @@ class EncoderBlock(nn.Module):
 
 class GPTEncoder(nn.Module):
     """GPT编码器"""
+
     def __init__(self):
         pass
-    def forward(self,X):
+
+    def forward(self, X):
         pass
