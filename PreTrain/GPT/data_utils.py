@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import Dataset, DataLoader
 from token_utils import Vocab, tokenize, truncate_pad
 import re
 import os
@@ -46,4 +46,45 @@ def _get_nsp_data(contents, is_next_labels, max_len):
 
 
 def _pad_GPT_input(examples, max_len, vocab):
-    pass
+    all_token_ids, all_segments, valid_lens, = [], [], []
+    nsp_labels = []
+    for (token_ids, segments, is_next) in examples:
+        all_token_ids.append(torch.tensor(token_ids + [vocab['<pad>']] * (max_len - len(token_ids)), dtype=torch.long))
+        all_segments.append(torch.tensor(segments + [0] * (max_len - len(segments)), dtype=torch.long))
+        # valid_lens不包括'<pad>'的计数
+        valid_lens.append(torch.tensor(len(token_ids), dtype=torch.float32))
+        nsp_labels.append(torch.tensor(is_next, dtype=torch.long))
+    return (all_token_ids, all_segments, valid_lens, nsp_labels)
+
+
+class MSRPC_dataset(Dataset):
+    def __init__(self, contents, is_next_labels, max_len, vocab=None):
+        contents = [tokenize(content, token='word') for content in contents]
+        sentences = [sentence for content in contents for sentence in content]
+        if vocab is None:
+            self.vocab = Vocab(sentences, min_freq=1, reserved_tokens=['<pad>', '<cls>', '<sep>'])
+        else:
+            self.vocab = vocab
+        # 获取下⼀句⼦预测任务的数据
+        examples = _get_nsp_data(contents, is_next_labels, max_len)
+        self.all_token_ids, self.all_segments, self.valid_lens, self.nsp_labels = _pad_GPT_input(examples, max_len,
+                                                                                                 self.vocab)
+
+    def __getitem__(self, idx):
+        return (self.all_token_ids[idx], self.all_segments[idx], self.valid_lens[idx], self.nsp_labels[idx])
+
+    def __len__(self):
+        return len(self.all_token_ids)
+
+
+def load_data_MSRPC(batch_size, max_len):
+    """加载MSPRC数据集"""
+
+    data_dir = './data/MSRParaphraseCorpus'
+    train_contents, train_is_next_labels = read_MPRCData(data_dir, is_train=True)
+    test_contents, test_is_next_labels = read_MPRCData(data_dir, is_train=False)
+    train_dataset = MSRPC_dataset(train_contents, train_is_next_labels, max_len)
+    test_dataset = MSRPC_dataset(test_contents, test_is_next_labels, max_len, train_dataset.vocab)
+    train_iter = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_iter = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    return train_iter, test_iter, train_dataset.vocab
