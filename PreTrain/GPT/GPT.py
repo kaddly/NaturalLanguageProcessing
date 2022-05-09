@@ -172,8 +172,9 @@ class EncoderBlock(nn.Module):
 class GPTEncoder(nn.Module):
     """GPT编码器"""
 
-    def __init__(self):
-        pass
+    def __init__(self, vocab_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_head, num_layers,
+                 dropout, max_len=1000, key_size=768, query_size=768, value_size=768, **kwargs):
+        super(GPTEncoder, self).__init__(**kwargs)
 
     def forward(self, X):
         pass
