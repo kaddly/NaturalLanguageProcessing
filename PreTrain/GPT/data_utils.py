@@ -18,7 +18,7 @@ def read_MPRCData(data_dir, is_train=True):
               encoding='UTF-8') as f:
         for line in f.readlines()[1:]:
             line = line.split('\t')
-            is_next_labels.append(line[0])
+            is_next_labels.append(int(line[0]))
             contents.append((_text_standardize(line[-2]), _text_standardize(line[-1])))
     return contents, is_next_labels
 
@@ -49,7 +49,7 @@ def _pad_GPT_input(examples, max_len, vocab):
     all_token_ids, all_segments, valid_lens, = [], [], []
     nsp_labels = []
     for (token_ids, segments, is_next) in examples:
-        all_token_ids.append(torch.tensor(token_ids + [vocab['<pad>']] * (max_len - len(token_ids)), dtype=torch.long))
+        all_token_ids.append(torch.tensor(vocab[token_ids] + [vocab['<pad>']] * (max_len - len(token_ids)), dtype=torch.long))
         all_segments.append(torch.tensor(segments + [0] * (max_len - len(segments)), dtype=torch.long))
         # valid_lens不包括'<pad>'的计数
         valid_lens.append(torch.tensor(len(token_ids), dtype=torch.float32))
