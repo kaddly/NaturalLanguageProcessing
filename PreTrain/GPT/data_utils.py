@@ -60,8 +60,8 @@ def _pad_GPT_input(examples, max_len, vocab):
 class MSRPC_dataset(Dataset):
     def __init__(self, contents, is_next_labels, max_len, vocab=None):
         contents = [tokenize(content, token='word') for content in contents]
-        sentences = [sentence for content in contents for sentence in content]
         if vocab is None:
+            sentences = [sentence for content in contents for sentence in content]
             self.vocab = Vocab(sentences, min_freq=1, reserved_tokens=['<pad>', '<cls>', '<sep>'])
         else:
             self.vocab = vocab
