@@ -35,5 +35,15 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
     return tokens, segment
 
 
+def _get_nsp_data(contents, is_next_labels, max_len):
+    nsp_data = []
+    for content, is_next in zip(contents, is_next_labels):
+        if len(content[0]) + len(content[-1]) + 3 > max_len:
+            continue
+        tokens, segments = get_tokens_and_segments(content[0], content[1])
+        nsp_data.append((tokens, segments, is_next))
+    return nsp_data
+
+
 def _pad_GPT_input(examples, max_len, vocab):
     pass
