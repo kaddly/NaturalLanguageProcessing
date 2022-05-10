@@ -15,15 +15,6 @@ def tokenize(lines, token='word'):
         print("未知类型：" + token)
 
 
-def truncate_pad(line, num_steps, padding_token):
-    """Truncate or pad sequences.
-
-    Defined in :numref:`sec_machine_translation`"""
-    if len(line) > num_steps:
-        return line[:num_steps]  # Truncate
-    return line + [padding_token] * (num_steps - len(line))  # Pad
-
-
 # 词表
 class Vocab:
     def __init__(self, tokens=None, min_freq=0, reserved_tokens=None):
