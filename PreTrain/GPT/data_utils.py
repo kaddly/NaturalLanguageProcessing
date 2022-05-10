@@ -26,11 +26,11 @@ def read_MPRCData(data_dir, is_train=True):
 # ⽣成下⼀句预测任务的数据
 def get_tokens_and_segments(tokens_a, tokens_b=None):
     """获取输⼊序列的词元及其⽚段索引"""
-    tokens = ['<cls>'] + tokens_a + ['<sep>']
+    tokens = ['<bos>'] + tokens_a + ['<sep>']
     # 0和1分别标记⽚段A和B
     segment = [0] * (len(tokens_a) + 2)
     if tokens_b is not None:
-        tokens += tokens_b + ['<sep>']
+        tokens += tokens_b + ['<ext>']
         segment += [1] * (len(tokens_b) + 1)
     return tokens, segment
 
@@ -62,7 +62,7 @@ class MSRPC_dataset(Dataset):
         contents = [tokenize(content, token='word') for content in contents]
         if vocab is None:
             sentences = [sentence for content in contents for sentence in content]
-            self.vocab = Vocab(sentences, min_freq=1, reserved_tokens=['<pad>', '<cls>', '<sep>'])
+            self.vocab = Vocab(sentences, min_freq=1, reserved_tokens=['<pad>', '<bos>', '<sep>', '<ext>'])
         else:
             self.vocab = vocab
         # 获取下⼀句⼦预测任务的数据
