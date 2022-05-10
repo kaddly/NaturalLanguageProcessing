@@ -214,8 +214,9 @@ class GPTModel(nn.Module):
                                   num_layers, dropout, max_len, key_size, query_size, value_size)
         self.hidden = nn.Sequential(nn.Linear(hid_in_features, num_hiddens))
         self.nsp = NextSentencePred(nsp_in_features)
+        self.head = nn.Linear(num_hiddens, vocab_size, bias=False)
 
     def forward(self, tokens, segments, valid_len=None):
         encoded_X = self.encoder(tokens, segments, valid_len)
         nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, -1, :]))
-        return encoded_X, nsp_Y_hat
+        return self.head(encoded_X), nsp_Y_hat
