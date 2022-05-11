@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from GPT import sequence_mask
+import time
 
 
 class MaskedSoftmaxCELoss(nn.CrossEntropyLoss):
@@ -30,5 +31,25 @@ def grad_clipping(net, theta):  # @save
             param.grad[:] *= theta / norm
 
 
-def train_GPT(train_iter, test_iter, fineTurn):
-    pass
+def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices):
+    def init_weights(m):
+        if type(m) == nn.Linear:
+            nn.init.xavier_uniform_(m.weight)
+
+        if type(m) == nn.LSTM:
+            for param in m._flat_weights_names:
+                if "weight" in param:
+                    nn.init.xavier_uniform_(m._parameters[param])
+    net.apply(init_weights)
+    net = nn.DataParallel(net, device_ids=devices).to(devices[0])
+    loss = MaskedSoftmaxCELoss()
+    start_time = time.time()
+    net.train()
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    total_batch = 0  # 记录进行到多少batch
+    dev_best_loss = float('inf')
+    last_improve = 0  # 记录上次验证集loss下降的batch数
+    flag = False  # 记录是否很久没有效果提升
+
+    for epoch in range(num_epochs):
+        print('Epoch [{}/{}]'.format(epoch + 1, num_epochs))
