@@ -47,6 +47,7 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
     nsp_loss = nn.CrossEntropyLoss()
     start_time = time.time()
     net.train()
+    net.fineTurn = fineTurn
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     total_batch = 0  # 记录进行到多少batch
     dev_best_loss = float('inf')
