@@ -212,8 +212,9 @@ class GPTModel(nn.Module):
 
     def __init__(self, vocab_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_heads, num_layers,
                  dropout, max_len=1000, key_size=768, query_size=768, value_size=768, hid_in_features=768,
-                 nsp_in_features=768):
+                 nsp_in_features=768, fineTurn=False):
         super(GPTModel, self).__init__()
+        self.fineTurn = fineTurn
         self.encoder = GPTEncoder(vocab_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
                                   num_layers, dropout, max_len, key_size, query_size, value_size)
         self.hidden = nn.Sequential(nn.Linear(hid_in_features, num_hiddens))
@@ -222,5 +223,8 @@ class GPTModel(nn.Module):
 
     def forward(self, tokens, segments):
         encoded_X = self.encoder(tokens, segments)
-        nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, -1, :]))
+        if self.fineTurn:
+            nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, -1, :]))
+        else:
+            nsp_Y_hat = None
         return self.head(encoded_X), nsp_Y_hat

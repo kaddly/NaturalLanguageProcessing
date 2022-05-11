@@ -30,5 +30,5 @@ def grad_clipping(net, theta):  # @save
             param.grad[:] *= theta / norm
 
 
-def train_GPT(train_iter, test_iter):
+def train_GPT(train_iter, test_iter, fineTurn):
     pass
