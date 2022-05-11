@@ -184,15 +184,15 @@ class GPTEncoder(nn.Module):
                                               ffn_num_hiddens, num_head, dropout, True))
         self.pos_embedding = nn.Parameter(torch.randn(1, max_len, num_hiddens))
 
-    def forward(self, tokens, segments):
+    def forward(self, tokens, segments, valid_len):
         X = self.token_embedding(tokens) + self.segment_embedding(segments)
         X = X + self.pos_embedding.data[:, :X.shape[1], :]
         batch_size, num_steps, _ = X.shape
         # dec_valid_lens的开头:(batch_size,num_steps),
         # 其中每⼀⾏是[1,2,...,num_steps]
-        valid_lens = torch.arange(1, num_steps + 1, device=X.device).repeat(batch_size, 1)
+        dec_valid_lens = torch.arange(1, num_steps + 1, device=X.device).repeat(batch_size, 1)
         for blk in self.blks:
-            X = blk(X, valid_lens)
+            X = blk(X, dec_valid_lens)
         return X
 
 
@@ -220,7 +220,7 @@ class GPTModel(nn.Module):
         self.nsp = NextSentencePred(nsp_in_features)
         self.head = nn.Linear(num_hiddens, vocab_size, bias=False)
 
-    def forward(self, tokens, segments):
-        encoded_X = self.encoder(tokens, segments)
+    def forward(self, tokens, segments, valid_len=None):
+        encoded_X = self.encoder(tokens, segments, valid_len)
         nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, -1, :]))
         return self.head(encoded_X), nsp_Y_hat
