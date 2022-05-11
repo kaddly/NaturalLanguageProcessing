@@ -31,7 +31,7 @@ def grad_clipping(net, theta):  # @save
             param.grad[:] *= theta / norm
 
 
-def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices):
+def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, theta=0.2):
     def init_weights(m):
         if type(m) == nn.Linear:
             nn.init.xavier_uniform_(m.weight)
@@ -43,7 +43,8 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices):
 
     net.apply(init_weights)
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
-    loss = MaskedSoftmaxCELoss()
+    token_loss = MaskedSoftmaxCELoss()
+    nsp_loss = nn.CrossEntropyLoss()
     start_time = time.time()
     net.train()
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
@@ -57,4 +58,13 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices):
         for i, batch in enumerate(train_iter):
             optimizer.zero_grad()
             tokens, segments, valid_lens, labels = [x.to(devices[0]) for x in batch]
-
+            y_hat, y_labels = net(tokens[:, :-1], segments[:, :-1])
+            if fineTurn:
+                token_l = token_loss(y_hat, tokens[:, 1:], valid_lens)
+                nsp_l = nsp_loss(y_labels, labels)
+                l = token_l + theta * nsp_l
+            else:
+                l = token_loss(y_hat, tokens[:, 1:], valid_lens)
+            l.sum().brackward()
+            grad_clipping(net, 1)
+            optimizer.step()
