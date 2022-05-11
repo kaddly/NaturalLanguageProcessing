@@ -184,7 +184,7 @@ class GPTEncoder(nn.Module):
                                               ffn_num_hiddens, num_head, dropout, True))
         self.pos_embedding = nn.Parameter(torch.randn(1, max_len, num_hiddens))
 
-    def forward(self, tokens, segments, valid_len):
+    def forward(self, tokens, segments):
         X = self.token_embedding(tokens) + self.segment_embedding(segments)
         X = X + self.pos_embedding.data[:, :X.shape[1], :]
         batch_size, num_steps, _ = X.shape
@@ -220,7 +220,7 @@ class GPTModel(nn.Module):
         self.nsp = NextSentencePred(nsp_in_features)
         self.head = nn.Linear(num_hiddens, vocab_size, bias=False)
 
-    def forward(self, tokens, segments, valid_len=None):
-        encoded_X = self.encoder(tokens, segments, valid_len)
+    def forward(self, tokens, segments):
+        encoded_X = self.encoder(tokens, segments)
         nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, -1, :]))
         return self.head(encoded_X), nsp_Y_hat
