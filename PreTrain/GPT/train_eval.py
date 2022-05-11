@@ -40,6 +40,7 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices):
             for param in m._flat_weights_names:
                 if "weight" in param:
                     nn.init.xavier_uniform_(m._parameters[param])
+
     net.apply(init_weights)
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
     loss = MaskedSoftmaxCELoss()
@@ -53,3 +54,7 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices):
 
     for epoch in range(num_epochs):
         print('Epoch [{}/{}]'.format(epoch + 1, num_epochs))
+        for i, batch in enumerate(train_iter):
+            optimizer.zero_grad()
+            tokens, segments, valid_lens, labels = [x.to(devices[0]) for x in batch]
+
