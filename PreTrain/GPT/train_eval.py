@@ -66,7 +66,7 @@ def evaluate_accuracy_gpu(net, data_iter, token_loss, fineTurn, theta, device=No
             else:
                 l = token_loss(y_hat, tokens[:, 1:], valid_lens)
             acc.append(accuracy(y_labels, labels))
-            loss.append(l)
+            loss.append(l.sum()/l.shape[0])
     return sum(acc) / len(acc), sum(loss) / len(loss)
 
 
@@ -103,8 +103,8 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
                 l = token_l + theta * nsp_l
             else:
                 l = token_loss(y_hat, tokens[:, 1:], valid_lens)
-            l.sum().brackward()
-            grad_clipping(net, 1)
+            l.sum().backward()
+            # grad_clipping(net, 1)
             optimizer.step()
             if total_batch % 50 == 0:
                 # 每多少轮输出在训练集和验证集上的效果
@@ -118,7 +118,11 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
                     improve = ''
                 time_dif = timedelta(seconds=int(round(time.time() - start_time)))
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
-                print(msg.format(total_batch, l.item(), train_acc, dev_loss, dev_acc, time_dif, improve))
+                print(msg.format(total_batch, l.sum()/l.shape[0], train_acc, dev_loss, dev_acc, time_dif, improve))
 
                 net.train()
             total_batch += 1
+
+
+def predict_GPT():
+    pass
