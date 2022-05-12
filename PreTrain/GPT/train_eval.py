@@ -27,10 +27,11 @@ def grad_clipping(net, theta):  # @save
         params = [p for p in net.parameters() if p.requires_grad]
     else:
         params = net.params
-    norm = torch.sqrt(sum(torch.sum((p.grad ** 2)) for p in params))
+    norm = torch.sqrt(sum(torch.sum((p.grad ** 2)) for p in params if p.grad is not None))
     if norm > theta:
         for param in params:
-            param.grad[:] *= theta / norm
+            if param.grad is not None:
+                param.grad[:] *= theta / norm
 
 
 def accuracy(y_hat, y):
@@ -96,12 +97,12 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
             tokens, segments, valid_lens, labels = [x.to(devices[0]) for x in batch]
             y_hat, y_labels = net(tokens[:, :-1], segments[:, :-1])
             if fineTurn:
-                token_l = token_loss(y_hat, tokens[:, 1:], valid_lens)
+                token_l = token_loss(y_hat, tokens[:, 1:], valid_lens).sum()
                 nsp_l = nsp_loss(y_labels, labels)
                 loss = token_l + theta * nsp_l
             else:
-                loss = token_loss(y_hat, tokens[:, 1:], valid_lens)
-            loss.sum().backward()
+                loss = token_loss(y_hat, tokens[:, 1:], valid_lens).sum()
+            loss.backward()
             grad_clipping(net, 1)
             optimizer.step()
             if total_batch % 50 == 0:
@@ -116,7 +117,7 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
                     improve = ''
                 time_dif = timedelta(seconds=int(round(time.time() - start_time)))
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
-                print(msg.format(total_batch, l.sum() / valid_lens.sum(), train_acc, dev_loss, dev_acc, time_dif,
+                print(msg.format(total_batch, loss / valid_lens.sum(), train_acc, dev_loss, dev_acc, time_dif,
                                  improve))
 
                 net.train()
