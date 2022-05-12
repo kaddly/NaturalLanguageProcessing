@@ -1,7 +1,9 @@
 import torch
 from torch import nn
+from torch.nn import functional as F
 from GPT import sequence_mask
 import time
+from datetime import timedelta
 
 
 class MaskedSoftmaxCELoss(nn.CrossEntropyLoss):
@@ -31,6 +33,43 @@ def grad_clipping(net, theta):  # @save
             param.grad[:] *= theta / norm
 
 
+def accuracy(y_hat, y):
+    """Compute the number of correct predictions.
+
+    Defined in :numref:`sec_softmax_scratch`"""
+    if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
+        y_hat = torch.argmax(y_hat, axis=1)
+    cmp = y_hat.to(dtype=y.dtype) == y
+    cmp = cmp.to(dtype=y.dtype)
+    return float(cmp.sum()) / len(cmp)
+
+
+def evaluate_accuracy_gpu(net, data_iter, token_loss, fineTurn, theta, device=None):
+    """Compute the accuracy for a model on a dataset using a GPU.
+
+    Defined in :numref:`sec_lenet`"""
+    if isinstance(net, nn.Module):
+        net.eval()  # Set the model to evaluation mode
+        if not device:
+            device = next(iter(net.parameters())).device
+    # No. of correct predictions, no. of predictions
+
+    with torch.no_grad():
+        acc, loss = [], []
+        for batch in data_iter:
+            tokens, segments, valid_lens, labels = [x.to(device) for x in batch]
+            y_hat, y_labels = net(tokens[:, :-1], segments[:, :-1])
+            if fineTurn:
+                token_l = token_loss(y_hat, tokens[:, 1:], valid_lens)
+                nsp_l = F.cross_entropy(y_labels, labels)
+                l = token_l + theta * nsp_l
+            else:
+                l = token_loss(y_hat, tokens[:, 1:], valid_lens)
+            acc.append(accuracy(y_labels, labels))
+            loss.append(l)
+    return sum(acc) / len(acc), sum(loss) / len(loss)
+
+
 def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, theta=0.2):
     def init_weights(m):
         if type(m) == nn.Linear:
@@ -51,8 +90,6 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     total_batch = 0  # 记录进行到多少batch
     dev_best_loss = float('inf')
-    last_improve = 0  # 记录上次验证集loss下降的batch数
-    flag = False  # 记录是否很久没有效果提升
 
     for epoch in range(num_epochs):
         print('Epoch [{}/{}]'.format(epoch + 1, num_epochs))
@@ -69,3 +106,19 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
             l.sum().brackward()
             grad_clipping(net, 1)
             optimizer.step()
+            if total_batch % 50 == 0:
+                # 每多少轮输出在训练集和验证集上的效果
+                train_acc = accuracy(y_labels, labels)
+                dev_acc, dev_loss = evaluate_accuracy_gpu(net, test_iter, token_loss, fineTurn, theta)
+                if dev_loss < dev_best_loss:
+                    dev_best_loss = dev_loss
+                    torch.save(net.state_dict(), './saved_dict/BiRNN.ckpt')
+                    improve = '*'
+                else:
+                    improve = ''
+                time_dif = timedelta(seconds=int(round(time.time() - start_time)))
+                msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
+                print(msg.format(total_batch, l.item(), train_acc, dev_loss, dev_acc, time_dif, improve))
+
+                net.train()
+            total_batch += 1
