@@ -66,21 +66,20 @@ def evaluate_accuracy_gpu(net, data_iter, token_loss, fineTurn, theta, device=No
             else:
                 l = token_loss(y_hat, tokens[:, 1:], valid_lens)
             acc.append(accuracy(y_labels, labels))
-            loss.append(l.sum()/valid_lens.sum())
+            loss.append(l.sum() / valid_lens.sum())
     return sum(acc) / len(acc), sum(loss) / len(loss)
 
 
 def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, theta=0.2):
-    def init_weights(m):
+    def xavier_init_weights(m):
         if type(m) == nn.Linear:
             nn.init.xavier_uniform_(m.weight)
-
-        if type(m) == nn.LSTM:
+        if type(m) == nn.GRU:
             for param in m._flat_weights_names:
                 if "weight" in param:
                     nn.init.xavier_uniform_(m._parameters[param])
 
-    net.apply(init_weights)
+    net.apply(xavier_init_weights)
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
     token_loss = MaskedSoftmaxCELoss()
     nsp_loss = nn.CrossEntropyLoss()
@@ -99,11 +98,11 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
             if fineTurn:
                 token_l = token_loss(y_hat, tokens[:, 1:], valid_lens)
                 nsp_l = nsp_loss(y_labels, labels)
-                l = token_l + theta * nsp_l
+                loss = token_l + theta * nsp_l
             else:
-                l = token_loss(y_hat, tokens[:, 1:], valid_lens)
-            l.sum().backward()
-            # grad_clipping(net, 1)
+                loss = token_loss(y_hat, tokens[:, 1:], valid_lens)
+            loss.sum().backward()
+            grad_clipping(net, 1)
             optimizer.step()
             if total_batch % 50 == 0:
                 # 每多少轮输出在训练集和验证集上的效果
@@ -117,7 +116,8 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
                     improve = ''
                 time_dif = timedelta(seconds=int(round(time.time() - start_time)))
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
-                print(msg.format(total_batch, l.sum()/valid_lens.sum(), train_acc, dev_loss, dev_acc, time_dif, improve))
+                print(msg.format(total_batch, l.sum() / valid_lens.sum(), train_acc, dev_loss, dev_acc, time_dif,
+                                 improve))
 
                 net.train()
             total_batch += 1
