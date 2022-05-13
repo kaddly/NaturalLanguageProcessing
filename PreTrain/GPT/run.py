@@ -1,10 +1,10 @@
 import torch
 from data_utils import load_data_MSRPC
 from GPT import GPTModel
-from train_eval import train_GPT, predict_GPT
+from train_eval import train_GPT
 
 if __name__ == '__main__':
-    num_epochs, batch_size = 20, 32
+    num_epochs, batch_size = 1, 32
     lr, dropout = 1e-4, 0.2
     model_dim, num_layers, num_heads = 256, 4, 4
     train_iter, test_iter, vocab = load_data_MSRPC(batch_size, max_len=64)
@@ -15,4 +15,3 @@ if __name__ == '__main__':
     devices = [torch.device(f'cuda:{i}') for i in range(torch.cuda.device_count())]
     devices = devices if devices else [torch.device('cpu')]
     train_GPT(net, train_iter, test_iter, num_epochs, True, lr, devices, theta=0.2)
-    print(predict_GPT(['My', 'name'], vocab, 3, net, devices[0]))
