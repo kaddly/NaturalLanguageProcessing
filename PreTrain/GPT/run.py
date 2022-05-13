@@ -14,4 +14,4 @@ if __name__ == '__main__':
                    hid_in_features=model_dim, nsp_in_features=model_dim, fineTurn=True)
     devices = [torch.device(f'cuda:{i}') for i in range(torch.cuda.device_count())]
     devices = devices if devices else [torch.device('cpu')]
-    train_GPT(net, train_iter, test_iter, num_epochs, True, lr, devices, theta=0.2)
+    train_GPT(net, train_iter, test_iter, num_epochs, True, lr, devices, vocab, theta=0.2)

@@ -71,7 +71,7 @@ def evaluate_accuracy_gpu(net, data_iter, token_loss, fineTurn, theta, device=No
     return sum(acc) / len(acc), sum(loss) / len(loss)
 
 
-def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, theta=0.2):
+def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, vocab, theta=0.2):
     def xavier_init_weights(m):
         if type(m) == nn.Linear:
             nn.init.xavier_uniform_(m.weight)
@@ -119,6 +119,11 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
                 print(msg.format(total_batch, loss / valid_lens.sum(), train_acc, dev_loss, dev_acc, time_dif,
                                  improve))
+                print(
+                    "| tgt: ", " ".join(vocab.to_tokens(tokens[0, 1:].cpu().tolist()[:int(valid_lens[0].sum() - 1)])),
+                    "\n| prd: ",
+                    " ".join(vocab.to_tokens(torch.argmax(y_hat, axis=1)[0].tolist()[:int(valid_lens[0].sum() - 1)])),
+                    "\n")
 
                 net.train()
             total_batch += 1
