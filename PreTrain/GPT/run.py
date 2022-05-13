@@ -4,7 +4,7 @@ from GPT import GPTModel
 from train_eval import train_GPT
 
 if __name__ == '__main__':
-    num_epochs, batch_size = 1, 32
+    num_epochs, batch_size = 20, 32
     lr, dropout = 1e-4, 0.2
     model_dim, num_layers, num_heads = 256, 4, 4
     train_iter, test_iter, vocab = load_data_MSRPC(batch_size, max_len=64)
