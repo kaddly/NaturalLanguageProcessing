@@ -15,3 +15,4 @@ if __name__ == '__main__':
     devices = [torch.device(f'cuda:{i}') for i in range(torch.cuda.device_count())]
     devices = devices if devices else [torch.device('cpu')]
     train_GPT(net, train_iter, test_iter, num_epochs, True, lr, devices, theta=0.2)
+    print(predict_GPT(['My', 'name'], vocab, 3, net, devices[0]))

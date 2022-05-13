@@ -124,5 +124,15 @@ def train_GPT(net, train_iter, test_iter, num_epochs, fineTurn, lr, devices, the
             total_batch += 1
 
 
-def predict_GPT():
-    pass
+def predict_GPT(sentence, vocab, num_preds, max_len, net, device):
+    tokens = [vocab['<bos>']] + vocab[sentence]
+    tokens = torch.tensor(tokens + [vocab['<pad>']] * (max_len - len(sentence)), dtype=torch.long).to(device)
+    token_len = len(sentence)
+    segments = torch.cat([torch.zeros(token_len), torch.ones(max_len - token_len)], dim=1).to(device)
+    output = []
+    for _ in range(num_preds):
+        tokens, segments = net(tokens, segments)
+        output.append(vocab.idx_to_token[tokens[token_len:token_len + 1]])
+        if tokens[token_len:token_len + 1] == vocab['<ext>']:
+            break
+    return ''.join(output)
