@@ -61,13 +61,13 @@ def evaluate_accuracy_gpu(net, data_iter, token_loss, fineTurn, theta, device=No
             tokens, segments, valid_lens, labels = [x.to(device) for x in batch]
             y_hat, y_labels = net(tokens[:, :-1], segments[:, :-1])
             if fineTurn:
-                token_l = token_loss(y_hat, tokens[:, 1:], valid_lens)
+                token_l = token_loss(y_hat, tokens[:, 1:], valid_lens).sum()
                 nsp_l = F.cross_entropy(y_labels, labels)
                 l = token_l + theta * nsp_l
             else:
-                l = token_loss(y_hat, tokens[:, 1:], valid_lens)
+                l = token_loss(y_hat, tokens[:, 1:], valid_lens).sum()
             acc.append(accuracy(y_labels, labels))
-            loss.append(l.sum() / valid_lens.sum())
+            loss.append(l / valid_lens.sum())
     return sum(acc) / len(acc), sum(loss) / len(loss)
 
 
