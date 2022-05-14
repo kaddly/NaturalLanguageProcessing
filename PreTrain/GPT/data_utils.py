@@ -9,6 +9,8 @@ def _text_standardize(text):
     text = re.sub(r'—', '-', text)
     text = re.sub(r'–', '-', text)
     text = re.sub(r'―', '-', text)
+    text = re.sub(r" \d+(,\d+)?(\.\d+)? ", " <NUM> ", text)
+    text = re.sub(r" \d+-+?\d*", " <NUM>-", text)
     return text.strip()
 
 
