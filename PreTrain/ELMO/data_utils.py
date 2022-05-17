@@ -15,7 +15,7 @@ def _read_wiki(data_dir):
 
 
 def _seq_data_cut(corpus, num_steps):
-    corpus = corpus[random.randint(1, num_steps - 1):]
+    corpus = corpus[random.randint(0, num_steps - 1):]
     num_subseqs = (len(corpus) - 1) // num_steps
     initial_indices = list(range(1, num_subseqs * num_steps, num_steps))
 
