@@ -38,12 +38,24 @@ def train(net, train_iter, test_iter, num_epochs, lr, devices, use_random_iter):
     total_batch = 0  # 记录进行到多少batch
     dev_best_loss = float('inf')
     for epoch in range(num_epochs):
+        state = None
         print('Epoch [{}/{}]'.format(epoch + 1, num_epochs))
         for i, batch in enumerate(train_iter):
             optimizer.zero_grad()
             seqs, seqs_fw, seqs_bw = [x.to(devices[0]) for x in batch]
-            fw_hat, bw_hat = net(seqs)
-            l = (loss(fw_hat.reshape(-1), seqs_fw.reshape(-1)) + loss(bw_hat.reshape(-1), seqs_bw.reshape(-1)))/2
+            if state is None or use_random_iter:
+                # 在第一次使用随机抽样时初始化状态
+                state = net.begin_state(batch_size=seqs.shape[0], device=devices[0])
+            else:
+                if isinstance(net, nn.Module) and not isinstance(state, tuple):
+                    # state 对于GRU是个张量
+                    state.detach_()
+                else:
+                    # state对于nn.LSTM或对于我们从零开始实现的模型是个张量
+                    for s in state:
+                        s.detach_()
+            fw_hat, bw_hat, state = net(seqs, state)
+            l = (loss(fw_hat, seqs_fw.reshape(-1)) + loss(bw_hat, seqs_bw.reshape(-1)))/2
             l.backward()
             grad_clipping(net, 1)
             optimizer.step()
