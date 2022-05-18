@@ -20,7 +20,7 @@ def evaluate_accuracy_gpu(net, data_iter, token_loss, fineTurn, theta, device=No
     pass
 
 
-def train(net, train_iter, test_iter, num_epochs, lr, devices, use_random_iter):
+def train(net, train_iter, test_iter, num_epochs, lr, devices, vocab, use_random_iter):
     def xavier_init_weights(m):
         if type(m) == nn.Linear:
             nn.init.xavier_uniform_(m.weight)
@@ -55,7 +55,10 @@ def train(net, train_iter, test_iter, num_epochs, lr, devices, use_random_iter):
                     for s in state:
                         s.detach_()
             fw_hat, bw_hat, state = net(seqs, state)
-            l = (loss(fw_hat, seqs_fw.reshape(-1)) + loss(bw_hat, seqs_bw.reshape(-1)))/2
+            l = (
+                        loss(fw_hat.reshape(-1, len(vocab)), seqs_fw.reshape(-1)) +
+                        loss(bw_hat.reshape(-1, len(vocab)), seqs_bw.reshape(-1))
+                ) / 2
             l.backward()
             grad_clipping(net, 1)
             optimizer.step()

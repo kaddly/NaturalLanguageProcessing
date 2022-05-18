@@ -29,8 +29,7 @@ class ELMO(nn.Module):
             self.fxs.append(output_f.permute(1, 0, 3))
             output_b, state = bl(torch.flip(embedding, dims=[0, ]), state)
             self.bxs.append(torch.flip(output_b, dims=[0, ]).permute(1, 0, 3))
-        return self.f_dense(self.fxs[-1].reshape(-1, self.fxs[-1].shape[-1])), self.b_dense(
-            self.bxs[-1].reshape(-1, self.bxs[-1].shape[-1])), state
+        return self.f_dense(self.fxs[-1]), self.b_dense(self.bxs[-1]), state
 
     def begin_state(self, device, batch_size=1):
         if not isinstance(self.fs[0], nn.LSTM):
