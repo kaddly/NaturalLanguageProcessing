@@ -5,24 +5,11 @@ import re
 from token_utils import Vocab, tokenize
 
 
-def _text_standardize(text):
-    text = text.lower()
-    text = re.sub(r'—', '-', text)
-    text = re.sub(r'–', '-', text)
-    text = re.sub(r'―', '-', text)
-    text = re.sub(r" \d+(,\d+)?(\.\d+)? ", " <NUM> ", text)
-    text = re.sub(r" \d+-+?\d*", " <NUM>-", text)
-    return text.strip()
-
-
 def _read_wiki(data_dir):
     with open(data_dir, 'r', encoding='UTF-8') as f:
         lines = f.readlines()
     # ⼤写字⺟转换为⼩写字⺟
-    paragraphs = [_text_standardize(line).split(' . ')
-                  for line in lines if len(line.split(' . ')) >= 2]
-    random.shuffle(paragraphs)
-    return paragraphs
+    return [re.sub('[^A-Za-z]+', ' ', line).strip().lower() for line in lines]
 
 
 def _seq_data_cut(corpus, num_steps):
@@ -47,15 +34,14 @@ def _seq_data_cut(corpus, num_steps):
 
 
 class _WikiTextDataset(Dataset):
-    def __init__(self, paragraphs, num_steps, vocab=None, max_tokens=-1):
-        paragraphs = [tokenize(paragraph, token='word') for paragraph in paragraphs]
-        sentences = [sentence for paragraph in paragraphs for sentence in paragraph]
+    def __init__(self, lines, num_steps, vocab=None, max_tokens=-1):
+        tokens = tokenize(lines, token='word')
         if vocab is None:
-            self.vocab = Vocab(sentences, min_freq=5)
+            self.vocab = Vocab(tokens, min_freq=5)
         else:
             self.vocab = vocab
         self.num_steps = num_steps
-        corpus = [self.vocab[token] for line in sentences for token in line]
+        corpus = [self.vocab[token] for line in tokens for token in line]
         if max_tokens > 0:
             corpus = corpus[:max_tokens]
         seqs, seqs_fw, seqs_bw = _seq_data_cut(corpus, self.num_steps)
@@ -71,12 +57,12 @@ class _WikiTextDataset(Dataset):
 
 
 def load_WikiTextDataset(bach_size, num_steps, use_random_iter=False, max_tokens=-1):
-    train_paragraphs = _read_wiki('./data/wikitext-2/wiki.train.tokens')
-    valid_paragraphs = _read_wiki('./data/wikitext-2/wiki.valid.tokens')
-    test_paragraphs = _read_wiki('./data/wikitext-2/wiki.test.tokens')
-    train_dataset = _WikiTextDataset(train_paragraphs, num_steps, max_tokens=max_tokens)
-    valid_dataset = _WikiTextDataset(valid_paragraphs, num_steps, train_dataset.vocab, max_tokens=max_tokens)
-    test_dataset = _WikiTextDataset(test_paragraphs, num_steps, train_dataset.vocab, max_tokens=max_tokens)
+    train_lines = _read_wiki('./data/wikitext-2/wiki.train.tokens')
+    valid_lines = _read_wiki('./data/wikitext-2/wiki.valid.tokens')
+    test_lines = _read_wiki('./data/wikitext-2/wiki.test.tokens')
+    train_dataset = _WikiTextDataset(train_lines, num_steps, max_tokens=max_tokens)
+    valid_dataset = _WikiTextDataset(valid_lines, num_steps, train_dataset.vocab, max_tokens=max_tokens)
+    test_dataset = _WikiTextDataset(test_lines, num_steps, train_dataset.vocab, max_tokens=max_tokens)
     train_iter = DataLoader(train_dataset, batch_size=bach_size, shuffle=use_random_iter, drop_last=True)
     valid_iter = DataLoader(valid_dataset, batch_size=bach_size, shuffle=use_random_iter, drop_last=True)
     test_iter = DataLoader(test_dataset, batch_size=bach_size, shuffle=use_random_iter, drop_last=True)
