@@ -6,6 +6,7 @@ from token_utils import Vocab, tokenize
 
 
 def _text_standardize(text):
+    text = text.lower()
     text = re.sub(r'—', '-', text)
     text = re.sub(r'–', '-', text)
     text = re.sub(r'―', '-', text)
@@ -18,7 +19,7 @@ def _read_wiki(data_dir):
     with open(data_dir, 'r', encoding='UTF-8') as f:
         lines = f.readlines()
     # ⼤写字⺟转换为⼩写字⺟
-    paragraphs = [_text_standardize(line).lower().split(' . ')
+    paragraphs = [_text_standardize(line).split(' . ')
                   for line in lines if len(line.split(' . ')) >= 2]
     random.shuffle(paragraphs)
     return paragraphs
