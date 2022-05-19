@@ -1,7 +1,9 @@
 import torch
 from torch import nn
+from torch.nn import functional as F
 import time
 from datetime import timedelta
+import math
 
 
 def grad_clipping(net, theta):  # @save
@@ -16,8 +18,34 @@ def grad_clipping(net, theta):  # @save
             param.grad[:] *= theta / norm
 
 
-def evaluate_accuracy_gpu(net, data_iter, token_loss, fineTurn, theta, device=None):
-    pass
+def evaluate_accuracy_gpu(net, data_iter, vocab, device=None):
+    if isinstance(net, nn.Module):
+        net.eval()  # Set the model to evaluation mode
+        if not device:
+            device = next(iter(net.parameters())).device
+    state = None
+    loss, fw_l, bw_l = [], [], []
+    with torch.no_grad():
+        for batch in data_iter:
+            seqs, seqs_fw, seqs_bw = [x.to(device) for x in batch]
+            if state is None:
+                # 在第一次使用随机抽样时初始化状态
+                state = net.begin_state(batch_size=seqs.shape[0], device=device)
+            else:
+                if isinstance(net, nn.Module) and not isinstance(state, tuple):
+                    # state 对于GRU是个张量
+                    state.detach_()
+                else:
+                    # state对于nn.LSTM或对于我们从零开始实现的模型是个张量
+                    for s in state:
+                        s.detach_()
+            fw_hat, bw_hat, state = net(seqs, state)
+            fw_loss = F.cross_entropy(fw_hat.reshape(-1, len(vocab)), seqs_fw.reshape(-1))
+            bw_loss = F.cross_entropy(bw_hat.reshape(-1, len(vocab)), seqs_bw.reshape(-1))
+            loss.append((fw_loss + bw_loss) / 2)
+            fw_l.append(math.exp(fw_loss * seqs_fw.numel() / seqs_fw.numel()))
+            bw_l.append(math.exp(bw_loss * seqs_bw.numel() / seqs_bw.numel()))
+        return sum(loss) / len(loss), sum(fw_l) / len(fw_l), sum(bw_l) / len(bw_l)
 
 
 def train(net, train_iter, test_iter, num_epochs, lr, devices, vocab, use_random_iter):
@@ -55,15 +83,14 @@ def train(net, train_iter, test_iter, num_epochs, lr, devices, vocab, use_random
                     for s in state:
                         s.detach_()
             fw_hat, bw_hat, state = net(seqs, state)
-            l = (
-                        loss(fw_hat.reshape(-1, len(vocab)), seqs_fw.reshape(-1)) +
-                        loss(bw_hat.reshape(-1, len(vocab)), seqs_bw.reshape(-1))
-                ) / 2
+            fw_loss = loss(fw_hat.reshape(-1, len(vocab)), seqs_fw.reshape(-1))
+            bw_loss = loss(bw_hat.reshape(-1, len(vocab)), seqs_bw.reshape(-1))
+            l = (fw_loss + bw_loss) / 2
             l.backward()
             grad_clipping(net, 1)
             optimizer.step()
             if total_batch % 50 == 0:
-                dev_loss = evaluate_accuracy_gpu(net, test_iter)
+                dev_loss, dev_f_loss, dev_b_loss = evaluate_accuracy_gpu(net, test_iter)
                 if dev_loss < dev_best_loss:
                     dev_best_loss = dev_loss
                     torch.save(net.state_dict(), './saved_dict/BiRNN.ckpt')
@@ -71,7 +98,10 @@ def train(net, train_iter, test_iter, num_epochs, lr, devices, vocab, use_random
                 else:
                     improve = ''
                 time_dif = timedelta(seconds=int(round(time.time() - start_time)))
-                msg = 'Iter: {0:>6},  Train Loss: {1:>5.2},  Train Acc: {2:>6.2%},  Val Loss: {3:>5.2},  Val Acc: {4:>6.2%},  Time: {5} {6}'
-                print(msg.format(total_batch, l, dev_loss, time_dif, improve))
+                msg = 'Iter: {0:>6},  Train Forward Perplexity: {1:>5.2},  Train Backward Perplexity: {2:>6.2%},  Test Forward Perplexity: {3:>5.2},  Test Backward Perplexity: {4:>6.2%},  Time: {5} {6}'
+                print(msg.format(total_batch,
+                                 math.exp(fw_loss * seqs_fw.numel() / seqs_fw.numel()),
+                                 math.exp(bw_loss * seqs_bw.numel() / seqs_bw.numel()), dev_f_loss, dev_b_loss,
+                                 time_dif, improve))
                 net.train()
             total_batch += 1
