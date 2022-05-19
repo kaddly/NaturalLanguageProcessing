@@ -30,7 +30,7 @@ def evaluate_accuracy_gpu(net, data_iter, vocab, device=None):
             seqs, seqs_fw, seqs_bw = [x.to(device) for x in batch]
             if state is None:
                 # 在第一次使用随机抽样时初始化状态
-                state = net.begin_state(batch_size=seqs.shape[0], device=device)
+                state = net.module.begin_state(batch_size=seqs.shape[0], device=device)
             else:
                 if isinstance(net, nn.Module) and not isinstance(state, tuple):
                     # state 对于GRU是个张量
@@ -73,7 +73,7 @@ def train(net, train_iter, test_iter, num_epochs, lr, devices, vocab, use_random
             seqs, seqs_fw, seqs_bw = [x.to(devices[0]) for x in batch]
             if state is None or use_random_iter:
                 # 在第一次使用随机抽样时初始化状态
-                state = net.begin_state(batch_size=seqs.shape[0], device=devices[0])
+                state = net.module.begin_state(batch_size=seqs.shape[0], device=devices[0])
             else:
                 if isinstance(net, nn.Module) and not isinstance(state, tuple):
                     # state 对于GRU是个张量
