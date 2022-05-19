@@ -20,17 +20,17 @@ class ELMO(nn.Module):
                                  for i in range(num_layers)])
         self.b_dense = nn.Linear(self.hidden_size, vocab_size)
 
-    def forward(self, seqs, state):
+    def forward(self, seqs, state_f, state_b):
         # (num_steps,batch_size,embedding_size)
         embedding = self.embedding(seqs.T)
         self.fxs = [embedding.permute(1, 0, 2)]
         self.bxs = [embedding.permute(1, 0, 2)]
         for fl, bl in zip(self.fs, self.bs):
-            output_f, state = fl(embedding, state)
+            output_f, state_f = fl(embedding, state_f)
             self.fxs.append(output_f.permute(1, 0, 2))
-            output_b, state = bl(torch.flip(embedding, dims=[0, ]), state)
+            output_b, state_b = bl(torch.flip(embedding, dims=[0, ]), state_b)
             self.bxs.append(torch.flip(output_b, dims=[0, ]).permute(1, 0, 2))
-        return self.f_dense(self.fxs[-1]), self.b_dense(self.bxs[-1]), state
+        return self.f_dense(self.fxs[-1]), self.b_dense(self.bxs[-1]), state_f, state_b
 
     def begin_state(self, device, batch_size=1):
         if not isinstance(self.fs[0], nn.LSTM):
@@ -43,7 +43,10 @@ class ELMO(nn.Module):
                 torch.zeros((1, batch_size, self.hidden_size), device=device))
 
     @property
-    def get_embedding(self):
+    def get_embedding(self, data, device):
+        state_f = self.begin_state(batch_size=data.shape[0], device=device)
+        state_b = self.begin_state(batch_size=data.shape[0], device=device)
+        self(data, state_f, state_b)
         xs = [
                  torch.cat((self.fxs[0], self.bxs[0]), dim=2).cpu().data.numpy()
              ] + [

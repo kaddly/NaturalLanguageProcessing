@@ -1,14 +1,24 @@
 import random
 import torch
 from torch.utils.data import DataLoader, Dataset
+import re
 from token_utils import Vocab, tokenize
+
+
+def _text_standardize(text):
+    text = re.sub(r'—', '-', text)
+    text = re.sub(r'–', '-', text)
+    text = re.sub(r'―', '-', text)
+    text = re.sub(r" \d+(,\d+)?(\.\d+)? ", " <NUM> ", text)
+    text = re.sub(r" \d+-+?\d*", " <NUM>-", text)
+    return text.strip()
 
 
 def _read_wiki(data_dir):
     with open(data_dir, 'r', encoding='UTF-8') as f:
         lines = f.readlines()
     # ⼤写字⺟转换为⼩写字⺟
-    paragraphs = [line.strip().lower().split(' . ')
+    paragraphs = [_text_standardize(line).lower().split(' . ')
                   for line in lines if len(line.split(' . ')) >= 2]
     random.shuffle(paragraphs)
     return paragraphs
@@ -27,6 +37,8 @@ def _seq_data_cut(corpus, num_steps):
     seqs_fw = []
     seqs_bw = []
     for pos in initial_indices:
+        if pos + num_steps + 1 > len(corpus):
+            continue
         seqs.append(data(pos))
         seqs_fw.append(data(pos + 1))
         seqs_bw.append(data(pos - 1))
@@ -64,7 +76,7 @@ def load_WikiTextDataset(bach_size, num_steps, use_random_iter=False, max_tokens
     train_dataset = _WikiTextDataset(train_paragraphs, num_steps, max_tokens=max_tokens)
     valid_dataset = _WikiTextDataset(valid_paragraphs, num_steps, train_dataset.vocab, max_tokens=max_tokens)
     test_dataset = _WikiTextDataset(test_paragraphs, num_steps, train_dataset.vocab, max_tokens=max_tokens)
-    train_iter = DataLoader(train_dataset, batch_size=bach_size, shuffle=use_random_iter)
-    valid_iter = DataLoader(valid_dataset, batch_size=bach_size, shuffle=use_random_iter)
-    test_iter = DataLoader(test_dataset, batch_size=bach_size, shuffle=use_random_iter)
+    train_iter = DataLoader(train_dataset, batch_size=bach_size, shuffle=use_random_iter, drop_last=True)
+    valid_iter = DataLoader(valid_dataset, batch_size=bach_size, shuffle=use_random_iter, drop_last=True)
+    test_iter = DataLoader(test_dataset, batch_size=bach_size, shuffle=use_random_iter, drop_last=True)
     return train_iter, valid_iter, test_iter, train_dataset.vocab
