@@ -1,7 +1,7 @@
 import torch
-from ELMO import ELMO
-from data_utils import load_WikiTextDataset
-from train_eval import train
+from .ELMO import ELMO
+from .data_utils import load_WikiTextDataset
+from .train_eval import train
 
 if __name__ == '__main__':
     devices = [torch.device(f'cuda:{i}') for i in range(torch.cuda.device_count())]

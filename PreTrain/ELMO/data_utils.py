@@ -2,7 +2,7 @@ import random
 import torch
 from torch.utils.data import DataLoader, Dataset
 import re
-from token_utils import Vocab, tokenize
+from .token_utils import Vocab, tokenize
 
 
 def _read_wiki(data_dir):
