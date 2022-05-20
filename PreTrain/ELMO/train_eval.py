@@ -100,7 +100,6 @@ def train(net, train_iter, test_iter, num_epochs, lr, devices, vocab, use_random
                 dev_loss, dev_f_loss, dev_b_loss = evaluate_accuracy_gpu(net, test_iter, vocab)
                 if dev_loss < dev_best_loss:
                     dev_best_loss = dev_loss
-                    torch.save(net.state_dict(), './saved_dict/BiRNN.ckpt')
                     improve = '*'
                 else:
                     improve = ''
@@ -116,5 +115,6 @@ def train(net, train_iter, test_iter, num_epochs, lr, devices, vocab, use_random
                           "\n| f_prd:", " ".join(vocab.to_tokens(torch.argmax(fw_hat[0], axis=1).cpu().tolist())),
                           "\n| b_prd:", " ".join(vocab.to_tokens(torch.argmax(bw_hat[0], axis=1).cpu().tolist())),
                           "\n")
+                torch.save(net.state_dict(), './saved_dict/BiRNN.ckpt')
                 net.train()
             total_batch += 1
