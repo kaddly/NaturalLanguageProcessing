@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from GPT import sequence_mask
+from .GPT import sequence_mask
 import time
 from datetime import timedelta
 

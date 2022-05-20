@@ -1,7 +1,7 @@
 import torch
-from data_utils import load_data_MSRPC
-from GPT import GPTModel
-from train_eval import train_GPT
+from .data_utils import load_data_MSRPC
+from .GPT import GPTModel
+from .train_eval import train_GPT
 
 if __name__ == '__main__':
     num_epochs, batch_size = 1000, 32

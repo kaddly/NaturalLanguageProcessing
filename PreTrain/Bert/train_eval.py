@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import time
-from utils import get_tokens_and_segments
+from .utils import get_tokens_and_segments
 
 
 def _get_batch_loss_bert(net, loss, vocab_size, tokens_X, segments_X, valid_lens_x, pred_positions_X, mlm_weights_X,

@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-from token_utils import Vocab, tokenize
+from .token_utils import Vocab, tokenize
 import re
 import os
 
