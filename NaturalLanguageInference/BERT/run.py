@@ -1,9 +1,9 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from BERTLoadPreTrain import load_pretrained_model, BERTClassifier
-from data_utils import read_snli, SNLIBERTDataset
-from train_eval import train_snli, predict_snli
+from .BERTLoadPreTrain import load_pretrained_model, BERTClassifier
+from .data_utils import read_snli, SNLIBERTDataset
+from .train_eval import train_snli, predict_snli
 
 if __name__ == '__main__':
     devices = [torch.device(f'cuda:{i}') for i in range(torch.cuda.device_count())]

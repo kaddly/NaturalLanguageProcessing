@@ -1,8 +1,8 @@
 import torch
 from torch.utils.data import DataLoader
-from Transformer import TransformerEncoder, TransformerDecoder, EncoderDecoder
-from utils import My_Dataset, show_heatmaps
-from train_eval import train_seq2seq, predict_seq2seq, bleu
+from .Transformer import TransformerEncoder, TransformerDecoder, EncoderDecoder
+from .utils import My_Dataset, show_heatmaps
+from .train_eval import train_seq2seq, predict_seq2seq, bleu
 import pandas as pd
 
 if __name__ == '__main__':

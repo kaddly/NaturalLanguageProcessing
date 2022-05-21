@@ -3,7 +3,7 @@ import os
 import re
 import torch
 from torch.utils.data import Dataset
-from token_utils import Vocab, tokenize, truncate_pad, get_tokens_and_segments
+from .token_utils import Vocab, tokenize, truncate_pad, get_tokens_and_segments
 
 
 def read_snli(data_dir, is_train):
