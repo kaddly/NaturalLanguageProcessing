@@ -1,8 +1,8 @@
 import torch
 from torch import nn
-from .utils import load_data_wiki
-from .Bert import BERTModel
-from .train_eval import train_bert, get_bert_encoding
+from utils import load_data_wiki
+from Bert import BERTModel
+from train_eval import train_bert, get_bert_encoding
 
 
 if __name__ == '__main__':
