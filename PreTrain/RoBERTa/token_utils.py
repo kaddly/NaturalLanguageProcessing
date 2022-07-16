@@ -83,15 +83,15 @@ class BytePairEncoding:
         for token, freq in raw_token_freqs.items():
             self.token_freqs[' '.join(list(token))] = raw_token_freqs[token]
         if reserved_tokens:
-            reserved_tokens = []
+            reserved_tokens = ['<UNK>']
         self.symbols = [chr(i) for i in range(97,123)]+reserved_tokens
         
     def get_max_freq_pair(self):
         pairs = collections.defaultdict(int)
         for token, freq in self.token_freqs.items():
-            self.symbols = token.split()
-            for i in range(len(self.symbols) - 1):
-                pairs[self.symbols[i], self.symbols[i + 1]] += freq
+            symbols = token.split()
+            for i in range(len(symbols) - 1):
+                pairs[symbols[i], symbols[i + 1]] += freq
         return max(pairs, key=pairs.get)
         
         
