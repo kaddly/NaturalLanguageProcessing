@@ -73,3 +73,26 @@ def count_corpus(tokens):
     if len(tokens) == 0 or isinstance(tokens[0], list):
         tokens = [token for line in tokens for token in line]
     return collections.Counter(tokens)
+
+
+class BytePairEncoding:
+    def __init__(self, lines, reserved_tokens=None) -> None:
+        self.tokens = tokenize(lines, 'word')
+        raw_token_freqs = count_corpus(self.tokens)
+        self.token_freqs = {}
+        for token, freq in raw_token_freqs.items():
+            self.token_freqs[' '.join(list(token))] = raw_token_freqs[token]
+        if reserved_tokens:
+            reserved_tokens = []
+        self.symbols = [chr(i) for i in range(97,123)]+reserved_tokens
+        
+    def get_max_freq_pair(self):
+        pairs = collections.defaultdict(int)
+        for token, freq in self.token_freqs.items():
+            self.symbols = token.split()
+            for i in range(len(self.symbols) - 1):
+                pairs[self.symbols[i], self.symbols[i + 1]] += freq
+        return max(pairs, key=pairs.get)
+        
+        
+
