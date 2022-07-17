@@ -76,15 +76,18 @@ def count_corpus(tokens):
 
 
 class BytePairEncoding:
-    def __init__(self, lines, reserved_tokens=None) -> None:
+    def __init__(self, lines, num_merges, reserved_tokens=None) -> None:
         self.tokens = tokenize(lines, 'word')
         raw_token_freqs = count_corpus(self.tokens)
         self.token_freqs = {}
         for token, freq in raw_token_freqs.items():
-            self.token_freqs[' '.join(list(token))] = raw_token_freqs[token]
+            self.token_freqs[' '.join(list(token)) + ' </w>'] = raw_token_freqs[token]
         if reserved_tokens:
             reserved_tokens = ['<UNK>']
-        self.symbols = [chr(i) for i in range(97,123)]+reserved_tokens
+        self.symbols = [chr(i) for i in range(97,123)] + reserved_tokens
+        for i in range(num_merges):
+            pairs = self.get_max_freq_pair()
+            self.token_freqs = self.merge_symbols(pairs)
         
     def get_max_freq_pair(self):
         pairs = collections.defaultdict(int)
@@ -94,5 +97,18 @@ class BytePairEncoding:
                 pairs[symbols[i], symbols[i + 1]] += freq
         return max(pairs, key=pairs.get)
         
-        
+    def merge_symbols(self, max_freq_pair):
+        self.symbols.append(''.join(max_freq_pair))
+        new_token_freqs = dict()
+        for token, freq in self.token_freqs.items():
+            new_token = token.replace(' '.join(max_freq_pair),''.join(max_freq_pair))
+            new_token_freqs[new_token] = self.token_freqs[token]
+        return new_token_freqs
 
+    @property
+    def get_symbols(self):
+        return self.symbols
+
+    @property
+    def get_token_frqs(self):
+        return self.token_freqs
