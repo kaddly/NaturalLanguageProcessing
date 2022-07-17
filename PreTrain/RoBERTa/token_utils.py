@@ -1,3 +1,4 @@
+from os import stat
 import torch
 import collections
 import jieba
@@ -104,6 +105,24 @@ class BytePairEncoding:
             new_token = token.replace(' '.join(max_freq_pair),''.join(max_freq_pair))
             new_token_freqs[new_token] = self.token_freqs[token]
         return new_token_freqs
+
+    def segment_BPE(self,tokens):
+        output=[]
+        for token in tokens:
+            start, end = 0, len(token)
+            cur_output = []
+            # 具有符号中可能最⻓⼦字的词元段
+            while start< len(token) and start<end:
+                if token[start:end] in self.symbols:
+                    cur_output.append(token[start:end])
+                    start = end
+                    end = len(token)
+                else:
+                    end-=1
+            if start<len(token):
+                cur_output.append("<UNK>")
+            output.append(' '.join(cur_output))
+        return output
 
     @property
     def get_symbols(self):
