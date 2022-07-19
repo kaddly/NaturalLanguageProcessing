@@ -83,9 +83,9 @@ class BytePairEncoding:
         self.token_freqs = {}
         for token, freq in raw_token_freqs.items():
             self.token_freqs[' '.join(list(token)) + ' </w>'] = raw_token_freqs[token]
-        if reserved_tokens:
+        if reserved_tokens is None:
             reserved_tokens = ['<UNK>', '</w>']
-        self.symbols = [chr(i) for i in range(97,123)] + reserved_tokens
+        self.symbols = [chr(i) for i in range(97, 123)] + reserved_tokens
         for i in range(num_merges):
             pairs = self.get_max_freq_pair()
             self.token_freqs = self.merge_symbols(pairs)
@@ -129,5 +129,5 @@ class BytePairEncoding:
         return self.symbols
 
     @property
-    def get_token_frqs(self):
+    def get_token_freqs(self):
         return self.token_freqs

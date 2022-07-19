@@ -57,7 +57,7 @@ class RoBERTaModel(nn.Module):
                  mlm_in_features=768):
         super(RoBERTaModel, self).__init__()
         self.encoder = RoBERTaEncoder(vocab_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
-                                   num_layers, dropout, max_len, key_size, query_size, value_size)
+                                      num_layers, dropout, max_len, key_size, query_size, value_size)
 
         self.mlm = MaskLM(vocab_size, num_hiddens, mlm_in_features)
 

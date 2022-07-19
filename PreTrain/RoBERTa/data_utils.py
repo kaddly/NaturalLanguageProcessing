@@ -57,3 +57,18 @@ def _get_mlm_data_from_tokens(tokens, vocab):
     pred_positions = [v[0] for v in pred_positions_and_labels]
     mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
     return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
+
+
+class _WikiTextDataset(Dataset):
+    def __init__(self, **kwargs):
+        super(_WikiTextDataset, self).__init__(**kwargs)
+
+    def __getitem__(self, item):
+        pass
+
+    def __len__(self):
+        pass
+
+
+def load_wiki():
+    pass
