@@ -1,5 +1,6 @@
 from os import stat
 import torch
+from tqdm import tqdm
 import collections
 import jieba
 
@@ -86,10 +87,10 @@ class BytePairEncoding:
         if reserved_tokens is None:
             reserved_tokens = ['<UNK>', '</w>']
         self.symbols = [chr(i) for i in range(97, 123)] + reserved_tokens
-        for i in range(num_merges):
+        for i in tqdm(range(num_merges)):
             pairs = self.get_max_freq_pair()
             self.token_freqs = self.merge_symbols(pairs)
-        
+
     def get_max_freq_pair(self):
         pairs = collections.defaultdict(int)
         for token, freq in self.token_freqs.items():
@@ -97,29 +98,29 @@ class BytePairEncoding:
             for i in range(len(symbols) - 1):
                 pairs[symbols[i], symbols[i + 1]] += freq
         return max(pairs, key=pairs.get)
-        
+
     def merge_symbols(self, max_freq_pair):
         self.symbols.append(''.join(max_freq_pair))
         new_token_freqs = dict()
         for token, freq in self.token_freqs.items():
-            new_token = token.replace(' '.join(max_freq_pair),''.join(max_freq_pair))
+            new_token = token.replace(' '.join(max_freq_pair), ''.join(max_freq_pair))
             new_token_freqs[new_token] = self.token_freqs[token]
         return new_token_freqs
 
-    def segment_BPE(self,tokens):
-        output=[]
+    def segment_BPE(self, tokens):
+        output = []
         for token in tokens:
             start, end = 0, len(token)
             cur_output = []
             # 具有符号中可能最⻓⼦字的词元段
-            while start< len(token) and start<end:
+            while start < len(token) and start < end:
                 if token[start:end] in self.symbols:
                     cur_output.append(token[start:end])
                     start = end
                     end = len(token)
                 else:
-                    end-=1
-            if start<len(token):
+                    end -= 1
+            if start < len(token):
                 cur_output.append("<UNK>")
             output.append(' '.join(cur_output))
         return output

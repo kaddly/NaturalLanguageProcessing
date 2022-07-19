@@ -1,8 +1,9 @@
 import os
 import random
+from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset, DataLoader
-from token_utils import BytePairEncoding, Vocab
+from token_utils import BytePairEncoding, Vocab, tokenize
 
 
 def _read_wiki(data_dir):
@@ -70,5 +71,14 @@ class _WikiTextDataset(Dataset):
         pass
 
 
-def load_wiki():
-    pass
+def load_wiki(batch_size, max_len):
+    data_dir = './data/wikitext-2'
+    paragraphs = _read_wiki(data_dir)
+    sentences = [sentence for paragraph in paragraphs for sentence in paragraph]
+    BRE = BytePairEncoding(sentences, 10000)
+    sentences = tokenize(sentences, 'word')
+    tokens = [BRE.segment_BPE(sentence) for sentence in tqdm(sentences)]
+    print(tokens)
+
+
+load_wiki(32, 64)
