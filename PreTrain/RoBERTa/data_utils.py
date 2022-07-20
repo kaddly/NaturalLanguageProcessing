@@ -8,13 +8,13 @@ from token_utils import BytePairEncoding, Vocab, tokenize
 
 def _read_wiki(data_dir):
     file_name = os.path.join(data_dir, 'wiki.train.tokens')
+    contexts = []
     with open(file_name, 'r', encoding='UTF-8') as f:
-        lines = f.readlines()
-    # ⼤写字⺟转换为⼩写字⺟
-    paragraphs = [line.strip().lower().split(' . ')
-                  for line in lines if len(line.split(' . ')) >= 2]
-    random.shuffle(paragraphs)
-    return paragraphs
+        for line in f.readlines():
+            if len(line.split(' . ')) < 2:
+                continue
+            contexts.extend(line.strip().lower().split(' . '))
+    return contexts
 
 
 # ⽣成遮蔽语⾔模型任务的数据
@@ -73,9 +73,8 @@ class _WikiTextDataset(Dataset):
 
 def load_wiki(batch_size, max_len):
     data_dir = './data/wikitext-2'
-    paragraphs = _read_wiki(data_dir)
-    sentences = [sentence for paragraph in paragraphs for sentence in paragraph]
-    BRE = BytePairEncoding(sentences, 10000)
+    sentences = _read_wiki(data_dir)
+    BRE = BytePairEncoding(sentences, 5000)
     sentences = tokenize(sentences, 'word')
     tokens = [BRE.segment_BPE(sentence) for sentence in tqdm(sentences)]
     print(tokens)
