@@ -1,5 +1,3 @@
-from os import stat
-import torch
 from tqdm import tqdm
 import collections
 import jieba
@@ -86,7 +84,8 @@ class BytePairEncoding:
             self.token_freqs[' '.join(list(token)) + ' </w>'] = raw_token_freqs[token]
         if reserved_tokens is None:
             reserved_tokens = ['<UNK>', '</w>']
-        self.symbols = [chr(i) for i in range(97, 123)] + reserved_tokens
+        self.symbols = reserved_tokens + [chr(i) for i in range(97, 123)]
+        print("BPE Encoding")
         for i in tqdm(range(num_merges)):
             pairs = self.get_max_freq_pair()
             self.token_freqs = self.merge_symbols(pairs)

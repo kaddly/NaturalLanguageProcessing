@@ -76,8 +76,10 @@ def load_wiki(batch_size, max_len):
     sentences = _read_wiki(data_dir)
     BRE = BytePairEncoding(sentences, 5000)
     sentences = tokenize(sentences, 'word')
+    print("BPE Decoding")
     tokens = [BRE.segment_BPE(sentence) for sentence in tqdm(sentences)]
     print(tokens)
+    print(BRE.symbols)
 
 
 load_wiki(32, 64)
