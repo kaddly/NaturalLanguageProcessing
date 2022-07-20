@@ -85,8 +85,7 @@ class BytePairEncoding:
         if reserved_tokens is None:
             reserved_tokens = ['<UNK>', '</w>']
         self.symbols = reserved_tokens + [chr(i) for i in range(97, 123)]
-        print("BPE Encoding")
-        for i in tqdm(range(num_merges)):
+        for i in tqdm(range(num_merges), desc="BPE Encoding"):
             pairs = self.get_max_freq_pair()
             self.token_freqs = self.merge_symbols(pairs)
 
