@@ -74,11 +74,9 @@ class _WikiTextDataset(Dataset):
 def load_wiki(batch_size, max_len):
     data_dir = './data/wikitext-2'
     sentences = _read_wiki(data_dir)
-    BRE = BytePairEncoding(sentences, 5000)
-    sentences = tokenize(sentences, 'word')
-    tokens = [BRE.segment_BPE(sentence) for sentence in tqdm(sentences, desc="BPE Decoding")]
-    print(' '.join(tokens))
-    print(BRE.symbols)
+    BRE = BytePairEncoding(sentences, 5000, ['<unk>', '</w>', '<mask>', '<seq>'])
+    tokens = BRE.segment_BPE(sentences)
+    print(tokens)
 
 
 load_wiki(32, 64)

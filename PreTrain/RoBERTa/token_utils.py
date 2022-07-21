@@ -1,6 +1,8 @@
-from tqdm import tqdm
+import os
+import pickle
 import collections
 import jieba
+from tqdm import tqdm
 
 
 def tokenize(lines, token='word'):
@@ -81,13 +83,26 @@ class BytePairEncoding:
         raw_token_freqs = count_corpus(self.tokens)
         self.token_freqs = {}
         for token, freq in raw_token_freqs.items():
-            self.token_freqs[' '.join(list(token)) + ' </w>'] = raw_token_freqs[token]
+            self.token_freqs[' '.join(list(token))] = raw_token_freqs[token]
         if reserved_tokens is None:
-            reserved_tokens = ['<UNK>', '</w>']
+            reserved_tokens = ['<unk>', '</w>']
         self.symbols = reserved_tokens + [chr(i) for i in range(97, 123)]
-        for i in tqdm(range(num_merges), desc="BPE Encoding"):
-            pairs = self.get_max_freq_pair()
-            self.token_freqs = self.merge_symbols(pairs)
+        self.token_to_idx = {symbol: idx for idx, symbol in enumerate(self.symbols)}
+        if not os.path.exists('./data/BPE'):
+            os.mkdir('./data/BPE')
+        if not os.path.exists('./data/BPE/symbols.plk'):
+            for i in tqdm(range(num_merges), desc="BPE Encoding"):
+                pairs = self.get_max_freq_pair()
+                self.token_freqs = self.merge_symbols(pairs)
+            with open('./data/BPE/symbols.plk', 'wb') as f:
+                pickle.dump(self.symbols, f)
+            with open('./data/BPE/token_to_idx.plk', 'wb') as f:
+                pickle.dump(self.token_to_idx, f)
+        else:
+            with open('./data/BPE/symbols.plk', 'rb') as f:
+                self.symbols = pickle.load(f)
+            with open('./data/BPE/token_to_idx.plk', 'rb') as f:
+                self.token_to_idx = pickle.load(f)
 
     def get_max_freq_pair(self):
         pairs = collections.defaultdict(int)
@@ -99,13 +114,14 @@ class BytePairEncoding:
 
     def merge_symbols(self, max_freq_pair):
         self.symbols.append(''.join(max_freq_pair))
+        self.token_to_idx[''.join(max_freq_pair)] = len(self.symbols) - 1
         new_token_freqs = dict()
         for token, freq in self.token_freqs.items():
             new_token = token.replace(' '.join(max_freq_pair), ''.join(max_freq_pair))
             new_token_freqs[new_token] = self.token_freqs[token]
         return new_token_freqs
 
-    def segment_BPE(self, tokens):
+    def segment_BPE_tokens(self, tokens):
         output = []
         for token in tokens:
             start, end = 0, len(token)
@@ -119,9 +135,27 @@ class BytePairEncoding:
                 else:
                     end -= 1
             if start < len(token):
-                cur_output.append("<UNK>")
-            output.append(' '.join(cur_output))
+                cur_output.append("<unk>")
+            cur_output.append('</w>')
+            output.extend(cur_output)
         return output
+
+    def segment_BPE(self, sentences):
+        all_tokens = tokenize(sentences, 'word')
+        return [self.segment_BPE_tokens(tokens) for tokens in tqdm(all_tokens, desc='BPE Decoding')]
+
+    def __len__(self):
+        return len(self.symbols)
+
+    def __getitem__(self, tokens):
+        if not isinstance(tokens, (list, tuple)):
+            return self.token_to_idx.get(tokens, self.unk)
+        return [self.__getitem__(token) for token in tokens]
+
+    def to_tokens(self, indices):
+        if not isinstance(indices, (list, tuple)):
+            return self.symbols[indices]
+        return [self.symbols[index] for index in indices]
 
     @property
     def get_symbols(self):
@@ -130,3 +164,7 @@ class BytePairEncoding:
     @property
     def get_token_freqs(self):
         return self.token_freqs
+
+    @property
+    def unk(self):  # 未知词元的索引为0
+        return 0
