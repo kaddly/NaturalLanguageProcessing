@@ -83,7 +83,7 @@ class BytePairEncoding:
         raw_token_freqs = count_corpus(self.tokens)
         self.token_freqs = {}
         for token, freq in raw_token_freqs.items():
-            self.token_freqs[' '.join(list(token))] = raw_token_freqs[token]
+            self.token_freqs[' '.join(list(token)) + ' </w>'] = raw_token_freqs[token]
         if reserved_tokens is None:
             reserved_tokens = ['<unk>', '</w>']
         self.symbols = reserved_tokens + [chr(i) for i in range(97, 123)]
@@ -124,6 +124,7 @@ class BytePairEncoding:
     def segment_BPE_tokens(self, tokens):
         output = []
         for token in tokens:
+            token += '</w>'
             start, end = 0, len(token)
             cur_output = []
             # 具有符号中可能最⻓⼦字的词元段
@@ -136,7 +137,6 @@ class BytePairEncoding:
                     end -= 1
             if start < len(token):
                 cur_output.append("<unk>")
-            cur_output.append('</w>')
             output.extend(cur_output)
         return output
 
