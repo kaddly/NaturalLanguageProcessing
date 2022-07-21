@@ -1,6 +1,5 @@
 import os
 import random
-from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset, DataLoader
 from token_utils import BytePairEncoding, Vocab, tokenize
