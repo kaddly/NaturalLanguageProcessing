@@ -2,7 +2,7 @@ import os
 import random
 import torch
 from torch.utils.data import Dataset, DataLoader
-from token_utils import BytePairEncoding, Vocab, tokenize
+from token_utils import BytePairEncoding
 
 
 def _read_wiki(data_dir):
@@ -10,9 +10,9 @@ def _read_wiki(data_dir):
     contexts = []
     with open(file_name, 'r', encoding='UTF-8') as f:
         for line in f.readlines():
-            if len(line.split(' . ')) < 2:
+            if len(line.split('.')) < 2:
                 continue
-            contexts.extend(line.strip().lower().split(' . '))
+            contexts.extend(line.strip().lower().split('.'))
     return contexts
 
 

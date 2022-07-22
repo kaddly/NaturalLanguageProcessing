@@ -90,18 +90,18 @@ class BytePairEncoding:
         self.token_to_idx = {symbol: idx for idx, symbol in enumerate(self.symbols)}
         if not os.path.exists('./data/BPE'):
             os.mkdir('./data/BPE')
-        if not os.path.exists('./data/BPE/symbols.plk'):
+        if not os.path.exists(f'./data/BPE/symbols{num_merges}.plk'):
             for i in tqdm(range(num_merges), desc="BPE Encoding"):
                 pairs = self.get_max_freq_pair()
                 self.token_freqs = self.merge_symbols(pairs)
-            with open('./data/BPE/symbols.plk', 'wb') as f:
+            with open(f'./data/BPE/symbols{num_merges}.plk', 'wb') as f:
                 pickle.dump(self.symbols, f)
-            with open('./data/BPE/token_to_idx.plk', 'wb') as f:
+            with open(f'./data/BPE/token_to_idx{num_merges}.plk', 'wb') as f:
                 pickle.dump(self.token_to_idx, f)
         else:
-            with open('./data/BPE/symbols.plk', 'rb') as f:
+            with open(f'./data/BPE/symbols{num_merges}.plk', 'rb') as f:
                 self.symbols = pickle.load(f)
-            with open('./data/BPE/token_to_idx.plk', 'rb') as f:
+            with open(f'./data/BPE/token_to_idx{num_merges}.plk', 'rb') as f:
                 self.token_to_idx = pickle.load(f)
 
     def get_max_freq_pair(self):
