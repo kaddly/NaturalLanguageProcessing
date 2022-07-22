@@ -10,9 +10,9 @@ def _read_wiki(data_dir):
     contexts = []
     with open(file_name, 'r', encoding='UTF-8') as f:
         for line in f.readlines():
-            if len(line.split('.')) < 2:
+            if len(line.split(' . ')) < 2:
                 continue
-            contexts.extend(line.strip().lower().split('.'))
+            contexts.extend(line.strip().lower().split(' . '))
     return contexts
 
 
@@ -73,8 +73,8 @@ class _WikiTextDataset(Dataset):
 def load_wiki(batch_size, max_len):
     data_dir = './data/wikitext-2'
     sentences = _read_wiki(data_dir)
-    BRE = BytePairEncoding(sentences, 5000, ['<unk>', '</w>', '<mask>', '<seq>'])
-    tokens = BRE.segment_BPE(sentences)
+    BPE = BytePairEncoding(sentences, 10000, ['<unk>', '</w>', '<mask>', '<seq>'])
+    tokens = BPE.segment_BPE(sentences)
     print(tokens)
 
 
