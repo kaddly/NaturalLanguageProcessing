@@ -73,7 +73,7 @@ class _WikiTextDataset(Dataset):
 def load_wiki(batch_size, max_len):
     data_dir = './data/wikitext-2'
     sentences = _read_wiki(data_dir)
-    BPE = BytePairEncoding(sentences, 10000, ['<unk>', '</w>', '<mask>', '<seq>'])
+    BPE = BytePairEncoding(sentences, 5000, ['<unk>', '</w>', '<mask>', '<seq>'])
     tokens = BPE.segment_BPE(sentences)
     print(tokens)
 

@@ -81,13 +81,16 @@ class BytePairEncoding:
     def __init__(self, lines, num_merges, reserved_tokens=None) -> None:
         self.tokens = tokenize(lines, 'word')
         raw_token_freqs = count_corpus(self.tokens)
-        self.token_freqs = {}
-        for token, freq in raw_token_freqs.items():
-            self.token_freqs[' '.join(list(token)) + ' </w>' if token.isalpha() else ' '.join(list(token))] = raw_token_freqs[token]
         if reserved_tokens is None:
             reserved_tokens = ['<unk>', '</w>']
         self.symbols = reserved_tokens + [chr(i) for i in range(97, 123)]
         self.token_to_idx = {symbol: idx for idx, symbol in enumerate(self.symbols)}
+        self.token_freqs = {}
+        for token, freq in raw_token_freqs.items():
+            if token.isalpha():
+                self.token_freqs[' '.join(list(token)) + ' </w>'] = raw_token_freqs[token]
+            else:
+                self.symbols.append(token)
         if not os.path.exists('./data/BPE'):
             os.mkdir('./data/BPE')
         if not os.path.exists(f'./data/BPE/symbols{num_merges}.plk'):
