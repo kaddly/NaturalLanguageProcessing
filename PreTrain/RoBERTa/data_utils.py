@@ -1,14 +1,15 @@
 import os
 import random
+from joblib import Parallel, delayed
 import torch
 from torch.utils.data import Dataset, DataLoader
 from token_utils import BytePairEncoding
 
 
-def _read_wiki(data_dir):
-    file_name = os.path.join(data_dir, 'wiki.train.tokens')
+def _read_wiki(data_dir, file_name):
+    file_path = os.path.join(data_dir, file_name)
     contexts = []
-    with open(file_name, 'r', encoding='UTF-8') as f:
+    with open(file_path, 'r', encoding='UTF-8') as f:
         for line in f.readlines():
             if len(line.split(' . ')) < 2:
                 continue
@@ -72,10 +73,12 @@ class _WikiTextDataset(Dataset):
 
 def load_wiki(batch_size, max_len):
     data_dir = './data/wikitext-2'
-    sentences = _read_wiki(data_dir)
-    BPE = BytePairEncoding(sentences, 5000, ['<unk>', '</w>', '<mask>', '<seq>'])
-    tokens = BPE.segment_BPE(sentences)
-    print(tokens)
+    train_sentences = _read_wiki(data_dir, 'wiki.train.tokens')
+    val_sentences = _read_wiki(data_dir, 'wiki.valid.tokens')
+    test_sentences = _read_wiki(data_dir, 'wiki.test.tokens')
+    BPE = BytePairEncoding(train_sentences, 10000, ['<unk>', '</w>', '<mask>', '<seq>'])
+    train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
+    print(train_tokens)
 
 
 load_wiki(32, 64)
