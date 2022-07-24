@@ -95,7 +95,11 @@ class collate_fn:
         self.vocab = vocab
 
     def __call__(self, data):
-        return
+        tokens = []
+        pred_positions = []
+        labels = []
+        for seq in data:
+            _get_mlm_data_from_tokens(seq, self.vocab)
 
 
 def load_wiki(batch_size, max_len):
