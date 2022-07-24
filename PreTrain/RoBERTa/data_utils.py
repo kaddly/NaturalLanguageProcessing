@@ -60,15 +60,42 @@ def _get_mlm_data_from_tokens(tokens, vocab):
     return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
 
 
+def _seq_data_cut(sentences_tokens, max_len):
+    all_tokens = [token for tokens in sentences_tokens for token in tokens]
+    all_tokens = all_tokens[random.randint(0, max_len - 1):]
+    num_subseqs = (len(all_tokens) - 1) // max_len
+    initial_indices = list(range(1, num_subseqs * max_len, max_len))
+
+    def data(pos):
+        # 返回从pos位置开始的长度为num_steps的子序列
+        return all_tokens[pos:max_len + pos]
+
+    seqs = []
+    for pos in initial_indices:
+        if pos + max_len + 1 > len(all_tokens):
+            continue
+        seqs.append(data(pos))
+    return seqs
+
+
 class _WikiTextDataset(Dataset):
-    def __init__(self, **kwargs):
+    def __init__(self, sentences_tokens, max_len, **kwargs):
         super(_WikiTextDataset, self).__init__(**kwargs)
+        self.seqs = _seq_data_cut(sentences_tokens, max_len)
 
     def __getitem__(self, item):
-        pass
+        return self.seqs[item]
 
     def __len__(self):
-        pass
+        len(self.seqs)
+
+
+class collate_fn:
+    def __init__(self, vocab):
+        self.vocab = vocab
+
+    def __call__(self, data):
+        return
 
 
 def load_wiki(batch_size, max_len):
@@ -76,9 +103,17 @@ def load_wiki(batch_size, max_len):
     train_sentences = _read_wiki(data_dir, 'wiki.train.tokens')
     val_sentences = _read_wiki(data_dir, 'wiki.valid.tokens')
     test_sentences = _read_wiki(data_dir, 'wiki.test.tokens')
-    BPE = BytePairEncoding(train_sentences, 10000, ['<unk>', '</w>', '<mask>', '<seq>'])
-    train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
-    print(train_tokens)
+    BPE = BytePairEncoding(train_sentences, 5000, ['<unk>', '</w>', '<mask>', '<sep>'])
+    train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(
+        delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
+    train_dataset = _WikiTextDataset(train_tokens, max_len)
+    val_dataset = _WikiTextDataset(train_tokens, max_len)
+    test_dataset = _WikiTextDataset(train_tokens, max_len)
+    batchify = collate_fn(BPE)
+    train_iter = DataLoader(train_dataset, batch_size, shuffle=True, collate_fn=batchify)
+    val_iter = DataLoader(val_dataset, batch_size, shuffle=True, collate_fn=batchify)
+    test_iter = DataLoader(test_dataset, batch_size, shuffle=True, collate_fn=batchify)
+    return train_iter, val_iter, test_iter, BPE
 
 
 load_wiki(32, 64)

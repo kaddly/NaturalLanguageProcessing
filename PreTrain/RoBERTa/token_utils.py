@@ -141,6 +141,7 @@ class BytePairEncoding:
             if start < len(token):
                 cur_output.append("<unk>")
             output.extend(cur_output)
+        output.extend(['<sep>'])
         return output
 
     def segment_BPE(self, sentences):
