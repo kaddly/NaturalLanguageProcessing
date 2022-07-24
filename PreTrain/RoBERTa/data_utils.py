@@ -95,11 +95,17 @@ class collate_fn:
         self.vocab = vocab
 
     def __call__(self, data):
-        tokens = []
-        pred_positions = []
-        labels = []
+        batch_tokens = []
+        batch_pred_positions = []
+        batch_labels = []
         for seq in data:
-            _get_mlm_data_from_tokens(seq, self.vocab)
+            tokens, pred_positions, mlm_labels = _get_mlm_data_from_tokens(seq, self.vocab)
+            batch_tokens.append(tokens)
+            batch_pred_positions.append(pred_positions)
+            batch_labels.append(mlm_labels)
+        return (torch.tensor(batch_tokens, dtype=torch.long), torch.tensor(batch_pred_positions,
+                                                                           dtype=torch.long), torch.tensor(batch_labels,
+                                                                                                           dtype=torch.long))
 
 
 def load_wiki(batch_size, max_len):
