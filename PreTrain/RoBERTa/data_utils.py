@@ -37,7 +37,7 @@ def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds, vocab):
                 masked_token = tokens[mlm_pred_position]
             # 10%的时间：⽤随机词替换该词
             else:
-                masked_token = random.choice(vocab.idx_to_token)
+                masked_token = random.choice(vocab.symbols)
         mlm_input_tokens[mlm_pred_position] = masked_token
         pred_positions_and_labels.append((mlm_pred_position, tokens[mlm_pred_position]))
     return mlm_input_tokens, pred_positions_and_labels
