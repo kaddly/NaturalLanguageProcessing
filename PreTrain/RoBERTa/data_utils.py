@@ -87,7 +87,7 @@ class _WikiTextDataset(Dataset):
         return self.seqs[item]
 
     def __len__(self):
-        len(self.seqs)
+        return len(self.seqs)
 
 
 class collate_fn:
@@ -117,8 +117,8 @@ def load_wiki(batch_size, max_len):
     train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(
         delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
     train_dataset = _WikiTextDataset(train_tokens, max_len)
-    val_dataset = _WikiTextDataset(train_tokens, max_len)
-    test_dataset = _WikiTextDataset(train_tokens, max_len)
+    val_dataset = _WikiTextDataset(val_tokens, max_len)
+    test_dataset = _WikiTextDataset(test_tokens, max_len)
     batchify = collate_fn(BPE)
     train_iter = DataLoader(train_dataset, batch_size, shuffle=True, collate_fn=batchify)
     val_iter = DataLoader(val_dataset, batch_size, shuffle=True, collate_fn=batchify)
@@ -126,4 +126,10 @@ def load_wiki(batch_size, max_len):
     return train_iter, val_iter, test_iter, BPE
 
 
-load_wiki(32, 64)
+train_iter, val_iter, test_iter, BPE = load_wiki(32, 64)
+
+for batch in train_iter:
+    print(batch[0])
+    print(batch[1])
+    print(batch[2])
+    break
