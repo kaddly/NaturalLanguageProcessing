@@ -78,19 +78,22 @@ def count_corpus(tokens):
 
 
 class BytePairEncoding:
-    def __init__(self, lines, num_merges, reserved_tokens=None) -> None:
+    def __init__(self, lines, num_merges, reserved_tokens=None, min_freq=0) -> None:
         self.tokens = tokenize(lines, 'word')
         raw_token_freqs = count_corpus(self.tokens)
         if reserved_tokens is None:
             reserved_tokens = ['<unk>', '</w>']
-        self.symbols = reserved_tokens + [chr(i) for i in range(97, 123)]
+        self.symbols = reserved_tokens + [chr(i) for i in range(97, 123)] + [str(i) for i in range(10)]
         self.token_to_idx = {symbol: idx for idx, symbol in enumerate(self.symbols)}
         self.token_freqs = {}
         for token, freq in raw_token_freqs.items():
-            if token.isalpha():
+            if freq < min_freq:
+                continue
+            if token.isalnum():
                 self.token_freqs[' '.join(list(token)) + ' </w>'] = raw_token_freqs[token]
             else:
-                self.symbols.append(token)
+                if token not in self.symbols:
+                    self.symbols.append(token)
         if not os.path.exists('./data/BPE'):
             os.mkdir('./data/BPE')
         if not os.path.exists(f'./data/BPE/symbols{num_merges}.plk'):
@@ -127,7 +130,7 @@ class BytePairEncoding:
     def segment_BPE_tokens(self, tokens):
         output = []
         for token in tokens:
-            token = token + '</w>' if token.isalpha() else token
+            token = token + '</w>' if token.isalnum() else token
             start, end = 0, len(token)
             cur_output = []
             # 具有符号中可能最⻓⼦字的词元段

@@ -1,5 +1,6 @@
 import os
 import random
+import pickle
 from joblib import Parallel, delayed
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -15,6 +16,28 @@ def _read_wiki(data_dir, file_name):
                 continue
             contexts.extend(line.strip().lower().split(' . '))
     return contexts
+
+
+def BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge):
+    BPE = BytePairEncoding(train_sentences, num_merge, ['<unk>', '</w>', '<masked>', '<sep>'], min_freq=5)
+    if not os.path.exists(f'./data/BPE_Decoding_token{num_merge}/'):
+        train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(
+            delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
+        os.mkdir(f'./data/BPE_Decoding_token{num_merge}/')
+        with open(f'./data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'wb') as f:
+            pickle.dump(train_tokens, f)
+        with open(f'./data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'wb') as f:
+            pickle.dump(val_tokens, f)
+        with open(f'./data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'wb') as f:
+            pickle.dump(test_tokens, f)
+    else:
+        with open(f'./data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'rb') as f:
+            train_tokens = pickle.load(f)
+        with open(f'./data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'rb') as f:
+            val_tokens = pickle.load(f)
+        with open(f'./data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'rb') as f:
+            test_tokens = pickle.load(f)
+    return train_tokens, val_tokens, test_tokens, BPE
 
 
 # ⽣成遮蔽语⾔模型任务的数据
@@ -108,14 +131,12 @@ class collate_fn:
                                                                                                            dtype=torch.long))
 
 
-def load_wiki(batch_size, max_len):
+def load_wiki(batch_size, max_len, num_merge=10000):
     data_dir = './data/wikitext-2'
     train_sentences = _read_wiki(data_dir, 'wiki.train.tokens')
     val_sentences = _read_wiki(data_dir, 'wiki.valid.tokens')
     test_sentences = _read_wiki(data_dir, 'wiki.test.tokens')
-    BPE = BytePairEncoding(train_sentences, 5000, ['<unk>', '</w>', '<mask>', '<sep>'])
-    train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(
-        delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
+    train_tokens, val_tokens, test_tokens, BPE = BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge)
     train_dataset = _WikiTextDataset(train_tokens, max_len)
     val_dataset = _WikiTextDataset(val_tokens, max_len)
     test_dataset = _WikiTextDataset(test_tokens, max_len)
@@ -128,8 +149,10 @@ def load_wiki(batch_size, max_len):
 
 train_iter, val_iter, test_iter, BPE = load_wiki(32, 64)
 
-for batch in train_iter:
+for i, batch in enumerate(train_iter):
     print(batch[0])
     print(batch[1])
     print(batch[2])
+    if i > 2:
+        break
     break
