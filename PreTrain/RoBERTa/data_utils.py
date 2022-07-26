@@ -145,14 +145,3 @@ def load_wiki(batch_size, max_len, num_merge=10000):
     val_iter = DataLoader(val_dataset, batch_size, shuffle=True, collate_fn=batchify)
     test_iter = DataLoader(test_dataset, batch_size, shuffle=True, collate_fn=batchify)
     return train_iter, val_iter, test_iter, BPE
-
-
-train_iter, val_iter, test_iter, BPE = load_wiki(32, 64)
-
-for i, batch in enumerate(train_iter):
-    print(batch[0])
-    print(batch[1])
-    print(batch[2])
-    if i > 2:
-        break
-    break
