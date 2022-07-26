@@ -53,8 +53,7 @@ class RoBERTaModel(nn.Module):
     """RoBERTa模型"""
 
     def __init__(self, vocab_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_heads, num_layers,
-                 dropout, max_len=1000, key_size=768, query_size=768, value_size=768, hid_in_features=768,
-                 mlm_in_features=768):
+                 dropout, max_len=1000, key_size=768, query_size=768, value_size=768, mlm_in_features=768):
         super(RoBERTaModel, self).__init__()
         self.encoder = RoBERTaEncoder(vocab_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
                                       num_layers, dropout, max_len, key_size, query_size, value_size)
