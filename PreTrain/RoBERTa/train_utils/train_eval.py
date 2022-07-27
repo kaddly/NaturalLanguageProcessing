@@ -29,11 +29,31 @@ def create_lr_scheduler(optimizer, num_step: int, epochs: int, warmup=True, warm
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=f)
 
 
-def evaluate_accuracy_gpu(net, val_iter):
-    return
+def evaluate_accuracy_gpu(net, data_iter, vocab_size, device=None):
+    """Compute the accuracy for a model on a dataset using a GPU.
+
+    Defined in :numref:`sec_lenet`"""
+    if isinstance(net, nn.Module):
+        net.eval()  # Set the model to evaluation mode
+        if not device:
+            device = next(iter(net.parameters())).device
+    # No. of correct predictions, no. of predictions
+    metric = Accumulator(3)
+    with torch.no_grad():
+        for X, y in data_iter:
+            if isinstance(X, tuple):
+                # Required for BERT Fine-tuning (to be covered later)
+                X = [x.to(device) for x in X]
+            else:
+                X = X.to(device)
+            y = y.to(device)
+            _, y_hat = net(X[0], None, X[1])
+            metric.add(f.cross_entropy(y_hat.reshape(-1, vocab_size), y.reshape(-1)),
+                       accuracy(y_hat.shape(-1, vocab_size), y.reshape(-1)), 1)
+    return metric[0] / metric[2], metric[1] / metric[2]
 
 
-def train(net, train_iter, val_iter, lr, num_epochs, devices):
+def train(net, train_iter, val_iter, lr, num_epochs, vocab_size, devices):
     def init_weights(m):
         if type(m) == nn.Linear:
             nn.init.xavier_uniform_(m.weight)
@@ -68,18 +88,37 @@ def train(net, train_iter, val_iter, lr, num_epochs, devices):
             else:
                 X = X.to(devices[0])
             labels = labels.to(devices[0])
-            encoded_X, mlm_y_hat = net(*X)
-            train_loss = loss(mlm_y_hat, labels)
+            encoded_X, mlm_y_hat = net(X[0], None, X[1])
+            train_loss = loss(mlm_y_hat.reshape(-1, vocab_size), labels.reshape(-1))
             train_loss.backward()
             optimizer.step()
             lr_scheduler.step()
             with torch.no_grad():
-                metric.add(train_loss * X[0].shape[0], accuracy(mlm_y_hat, labels), X[0].shape[0])
+                metric.add(train_loss * labels.shape[0],
+                           accuracy(mlm_y_hat.reshape(-1, vocab_size), labels.reshape(-1)), labels.shape[0])
             if total_batch % 20 == 0:
                 lr_current = optimizer.param_groups[0]["lr"]
-                dev_acc, dev_loss = evaluate_accuracy_gpu(net, val_iter)
-
-
+                dev_acc, dev_loss = evaluate_accuracy_gpu(net, val_iter, vocab_size)
+                if dev_loss < dev_best_loss:
+                    torch.save(net.state_dict(), os.path.join(parameter_path, model_file + '.ckpt'))
+                    dev_best_loss = dev_loss
+                    improve = '*'
+                    last_improve = total_batch
+                else:
+                    improve = ''
+                time_dif = timedelta(seconds=int(round(time.time() - start_time)))
+                msg = 'Iter: {0:>6},  Train Loss: {1:>5.4},  Train Acc: {2:>6.2%},  Train lr: {3:>5.4},  Val Loss: {4:>5.4},  Val Acc: {5:>6.2%},  Time: {6} {7}'
+                print(msg.format(total_batch, metric[0] / metric[2], metric[1] / total_batch, lr_current, dev_loss,
+                                 dev_acc, time_dif, improve))
+                net.train()
+            total_batch += 1
+            if total_batch - last_improve > 1000:
+                # 验证集loss超过1000batch没下降，结束训练
+                print("No optimization for a long time, auto-stopping...")
+                flag = True
+                break
+        if flag:
+            break
 
 
 def test():

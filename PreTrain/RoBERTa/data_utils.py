@@ -126,9 +126,8 @@ class collate_fn:
             batch_tokens.append(tokens)
             batch_pred_positions.append(pred_positions)
             batch_labels.append(mlm_labels)
-        return (torch.tensor(batch_tokens, dtype=torch.long), torch.tensor(batch_pred_positions,
-                                                                           dtype=torch.long), torch.tensor(batch_labels,
-                                                                                                           dtype=torch.long))
+        return (torch.tensor(batch_tokens, dtype=torch.long),
+                torch.tensor(batch_pred_positions, dtype=torch.long)), torch.tensor(batch_labels, dtype=torch.long)
 
 
 def load_wiki(batch_size, max_len, num_merge=10000):
