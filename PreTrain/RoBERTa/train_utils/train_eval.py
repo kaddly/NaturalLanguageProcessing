@@ -38,8 +38,8 @@ def evaluate_accuracy_gpu(net, data_iter, vocab_size, device=None):
         if not device:
             device = next(iter(net.parameters())).device
     # No. of correct predictions, no. of predictions
-    metric = Accumulator(3)
     with torch.no_grad():
+        acc, loss = [], []
         for X, y in data_iter:
             if isinstance(X, tuple):
                 # Required for BERT Fine-tuning (to be covered later)
@@ -48,9 +48,9 @@ def evaluate_accuracy_gpu(net, data_iter, vocab_size, device=None):
                 X = X.to(device)
             y = y.to(device)
             _, y_hat = net(X[0], None, X[1])
-            metric.add(f.cross_entropy(y_hat.reshape(-1, vocab_size), y.reshape(-1)),
-                       accuracy(y_hat.shape(-1, vocab_size), y.reshape(-1)), 1)
-    return metric[0] / metric[2], metric[1] / metric[2]
+            acc.append(accuracy(y_hat.reshape(-1, vocab_size), y.reshape(-1)))
+            loss.append(f.cross_entropy(y_hat.reshape(-1, vocab_size), y.reshape(-1)))
+    return sum(acc) / len(acc), sum(loss) / len(loss)
 
 
 def train(net, train_iter, val_iter, lr, num_epochs, vocab_size, devices):
@@ -108,11 +108,11 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab_size, devices):
                     improve = ''
                 time_dif = timedelta(seconds=int(round(time.time() - start_time)))
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.4},  Train Acc: {2:>6.2%},  Train lr: {3:>5.4},  Val Loss: {4:>5.4},  Val Acc: {5:>6.2%},  Time: {6} {7}'
-                print(msg.format(total_batch, metric[0] / metric[2], metric[1] / total_batch, lr_current, dev_loss,
+                print(msg.format(total_batch, metric[0] / metric[2], metric[1] / (total_batch+1), lr_current, dev_loss,
                                  dev_acc, time_dif, improve))
                 net.train()
             total_batch += 1
-            if total_batch - last_improve > 1000:
+            if total_batch - last_improve > 5000:
                 # 验证集loss超过1000batch没下降，结束训练
                 print("No optimization for a long time, auto-stopping...")
                 flag = True
