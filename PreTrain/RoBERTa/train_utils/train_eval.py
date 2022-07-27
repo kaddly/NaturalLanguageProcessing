@@ -29,8 +29,8 @@ def create_lr_scheduler(optimizer, num_step: int, epochs: int, warmup=True, warm
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=f)
 
 
-def evaluate_accuracy_gpu():
-    pass
+def evaluate_accuracy_gpu(net, val_iter):
+    return
 
 
 def train(net, train_iter, val_iter, lr, num_epochs, devices):
@@ -49,6 +49,7 @@ def train(net, train_iter, val_iter, lr, num_epochs, devices):
     dev_best_loss = float('inf')
     last_improve = 0  # 记录上次验证集loss下降的batch数
     flag = False  # 记录是否很久没有效果提升
+    metric = Accumulator(4)
 
     # 模型参数保存路径
     saved_dir = './saved_dict'
@@ -59,6 +60,26 @@ def train(net, train_iter, val_iter, lr, num_epochs, devices):
 
     for epoch in range(num_epochs):
         print('Epoch [{}/{}]'.format(epoch + 1, num_epochs))
+        for i, (X, labels) in enumerate(train_iter):
+            optimizer.zero_grad()
+            if isinstance(X, tuple):
+                # Required for BERT fine-tuning (to be covered later)
+                X = [x.to(devices[0]) for x in X]
+            else:
+                X = X.to(devices[0])
+            labels = labels.to(devices[0])
+            encoded_X, mlm_y_hat = net(*X)
+            train_loss = loss(mlm_y_hat, labels)
+            train_loss.backward()
+            optimizer.step()
+            lr_scheduler.step()
+            with torch.no_grad():
+                metric.add(train_loss * X[0].shape[0], accuracy(mlm_y_hat, labels), X[0].shape[0])
+            if total_batch % 20 == 0:
+                lr_current = optimizer.param_groups[0]["lr"]
+                dev_acc, dev_loss = evaluate_accuracy_gpu(net, val_iter)
+
+
 
 
 def test():
