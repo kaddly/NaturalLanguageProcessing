@@ -60,7 +60,8 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab_size, devices):
 
     net.apply(init_weights)
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
-    optimizer = torch.optim.Adam(params=net.parameters(), lr=lr, betas=(0.9, 0.98))
+    # optimizer = torch.optim.Adam(params=net.parameters(), lr=lr, betas=(0.9, 0.98))
+    optimizer = torch.optim.SGD(params=net.parameters(), lr=lr)
     lr_scheduler = create_lr_scheduler(optimizer, len(train_iter), num_epochs)
     loss = nn.CrossEntropyLoss()
     start_time = time.time()
@@ -108,8 +109,9 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab_size, devices):
                     improve = ''
                 time_dif = timedelta(seconds=int(round(time.time() - start_time)))
                 msg = 'Iter: {0:>6},  Train Loss: {1:>5.4},  Train Acc: {2:>6.2%},  Train lr: {3:>5.4},  Val Loss: {4:>5.4},  Val Acc: {5:>6.2%},  Time: {6} {7}'
-                print(msg.format(total_batch, metric[0] / metric[2], metric[1] / (total_batch+1), lr_current, dev_loss,
-                                 dev_acc, time_dif, improve))
+                print(
+                    msg.format(total_batch, metric[0] / metric[2], metric[1] / (total_batch + 1), lr_current, dev_loss,
+                               dev_acc, time_dif, improve))
                 net.train()
             total_batch += 1
             if total_batch - last_improve > 5000:
@@ -121,5 +123,23 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab_size, devices):
             break
 
 
-def test():
-    pass
+def test(model, data_iter, devices):
+    if not os.path.exists('./saved_dict/RoBERTa/RoBERTa.ckpt'):
+        print('please train before!')
+        return
+    model.load_state_dict(torch.load('./saved_dict/GraphSAGE/GraphSAGE.ckpt'), False)
+    model = nn.DataParallel(model, device_ids=devices).to(devices[0])
+    model.eval()
+    with torch.no_grad():
+        acc, loss = [], []
+        for X, y in data_iter:
+            if isinstance(X, tuple):
+                X = [x.to(devices[0]) for x in X]
+            else:
+                X = X.to(devices[0])
+            y = y.to(devices[0])
+            _, y_hat = model(X[0], None, X[1])
+            acc.append(accuracy(y_hat.reshape(-1, y_hat.shape[-1]), y.reshape(-1)))
+            loss.append(f.cross_entropy(y_hat.reshape(-1, y_hat.shape[-1]), y.reshape(-1)))
+    print("Test set results:", "loss= {:.4f}".format(sum(loss) / len(loss)),
+          "accuracy= {:.4f}".format(sum(acc) / len(acc)))
