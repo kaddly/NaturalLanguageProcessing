@@ -12,5 +12,5 @@ if __name__ == '__main__':
     print(net)
     devices = [torch.device(f'cuda:{i}') for i in range(torch.cuda.device_count())]
     devices = devices if devices else [torch.device('cpu')]
-    # train(net, train_iter, val_iter, lr, num_epoch, len(BPE), devices)
+    train(net, train_iter, val_iter, lr, num_epoch, len(BPE), devices)
     test(net, test_iter, devices)
