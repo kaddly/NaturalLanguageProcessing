@@ -127,7 +127,7 @@ def test(model, data_iter, devices):
     if not os.path.exists('./saved_dict/RoBERTa/RoBERTa.ckpt'):
         print('please train before!')
         return
-    model.load_state_dict(torch.load('./saved_dict/GraphSAGE/GraphSAGE.ckpt'), False)
+    model.load_state_dict(torch.load('./saved_dict/RoBERTa/RoBERTa.ckpt'), False)
     model = nn.DataParallel(model, device_ids=devices).to(devices[0])
     model.eval()
     with torch.no_grad():
