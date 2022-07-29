@@ -2,6 +2,8 @@ import os
 import torch
 import collections
 import jieba
+import pickle
+from tqdm import tqdm
 
 
 def tokenize(lines, token='word'):
@@ -107,3 +109,103 @@ class TokenEmbedding:
 
     def __len__(self):
         return len(self.idx_to_token)
+
+
+class BytePairEncoding:
+    def __init__(self, lines, num_merges, reserved_tokens=None, min_freq=0) -> None:
+        self.tokens = tokenize(lines, 'word')
+        raw_token_freqs = count_corpus(self.tokens)
+        if reserved_tokens is None:
+            reserved_tokens = ['<unk>', '</w>']
+        self.symbols = reserved_tokens + [chr(i) for i in range(97, 123)] + [str(i) for i in range(10)]
+        self.token_to_idx = {symbol: idx for idx, symbol in enumerate(self.symbols)}
+        self.token_freqs = {}
+        for token, freq in raw_token_freqs.items():
+            if freq < min_freq:
+                continue
+            if token.isalnum():
+                self.token_freqs[' '.join(list(token)) + ' </w>'] = raw_token_freqs[token]
+            else:
+                if token not in self.symbols:
+                    self.symbols.append(token)
+        if not os.path.exists('./data/BPE'):
+            os.mkdir('./data/BPE')
+        if not os.path.exists(f'./data/BPE/symbols{num_merges}.plk'):
+            for i in tqdm(range(num_merges), desc="BPE Encoding"):
+                pairs = self.get_max_freq_pair()
+                self.token_freqs = self.merge_symbols(pairs)
+            with open(f'./data/BPE/symbols{num_merges}.plk', 'wb') as f:
+                pickle.dump(self.symbols, f)
+            with open(f'./data/BPE/token_to_idx{num_merges}.plk', 'wb') as f:
+                pickle.dump(self.token_to_idx, f)
+        else:
+            with open(f'./data/BPE/symbols{num_merges}.plk', 'rb') as f:
+                self.symbols = pickle.load(f)
+            with open(f'./data/BPE/token_to_idx{num_merges}.plk', 'rb') as f:
+                self.token_to_idx = pickle.load(f)
+
+    def get_max_freq_pair(self):
+        pairs = collections.defaultdict(int)
+        for token, freq in self.token_freqs.items():
+            symbols = token.split()
+            for i in range(len(symbols) - 1):
+                pairs[symbols[i], symbols[i + 1]] += freq
+        return max(pairs, key=pairs.get)
+
+    def merge_symbols(self, max_freq_pair):
+        self.symbols.append(''.join(max_freq_pair))
+        self.token_to_idx[''.join(max_freq_pair)] = len(self.symbols) - 1
+        new_token_freqs = dict()
+        for token, freq in self.token_freqs.items():
+            new_token = token.replace(' '.join(max_freq_pair), ''.join(max_freq_pair))
+            new_token_freqs[new_token] = self.token_freqs[token]
+        return new_token_freqs
+
+    def segment_BPE_tokens(self, tokens):
+        output = []
+        for token in tokens:
+            token = token + '</w>' if token.isalnum() else token
+            start, end = 0, len(token)
+            cur_output = []
+            # 具有符号中可能最⻓⼦字的词元段
+            while start < len(token) and start < end:
+                if token[start:end] in self.symbols:
+                    cur_output.append(token[start:end])
+                    start = end
+                    end = len(token)
+                else:
+                    end -= 1
+            if start < len(token):
+                cur_output.append("<unk>")
+            output.extend(cur_output)
+        output.extend(['<sep>'])
+        return output
+
+    def segment_BPE(self, sentences):
+        all_tokens = tokenize(sentences, 'word')
+        return [self.segment_BPE_tokens(tokens) for tokens in tqdm(all_tokens, desc='BPE Decoding')]
+
+    def __len__(self):
+        return len(self.symbols)
+
+    def __getitem__(self, tokens):
+        if not isinstance(tokens, (list, tuple)):
+            return self.token_to_idx.get(tokens, self.unk)
+        return [self.__getitem__(token) for token in tokens]
+
+    def to_tokens(self, indices):
+        if not isinstance(indices, (list, tuple)):
+            return self.symbols[indices]
+        return [self.symbols[index] for index in indices]
+
+    @property
+    def get_symbols(self):
+        return self.symbols
+
+    @property
+    def get_token_freqs(self):
+        return self.token_freqs
+
+    @property
+    def unk(self):  # 未知词元的索引为0
+        return 0
