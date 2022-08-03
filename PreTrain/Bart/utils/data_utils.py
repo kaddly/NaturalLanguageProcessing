@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import torch
 from torch.utils.data import Dataset, DataLoader
+from utils.token_utils import BytePairEncoding
 from utils.sample_utils import RandomGenerator, Poisson
 
 
