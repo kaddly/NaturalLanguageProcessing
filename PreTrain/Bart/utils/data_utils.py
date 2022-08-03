@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import torch
 from torch.utils.data import Dataset, DataLoader
+from utils.sample_utils import RandomGenerator, Poisson
 
 
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5), cmap='Reds'):

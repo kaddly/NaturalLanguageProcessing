@@ -1,5 +1,6 @@
 import random
 import collections
+import numpy as np
 
 
 class RandomGenerator:
@@ -38,8 +39,12 @@ class Poisson:
                 yield 0
 
     def perform_exp(self, rate, time):
-        """进行一次实验
+        """
+        进行一次实验
         每次实验中，时间分片的数量比rate高两个数量级
+        :param rate:单位时间内发生的频率
+        :param time:观测事件发生次数的时间范围
+        :return:
         """
         level = len(str(rate))
         shard_num = 10 ** (level + self.NUM_LEVEL)  # 计算时间分片的数量
