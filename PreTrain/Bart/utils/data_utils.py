@@ -1,5 +1,5 @@
 import os
-from matplotlib.pyplot import plot as plt
+import matplotlib.pyplot as plt
 import random
 import torch
 from torch.utils.data import Dataset, DataLoader
