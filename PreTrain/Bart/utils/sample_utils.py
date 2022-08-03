@@ -1,6 +1,5 @@
 import random
 import collections
-import numpy as np
 
 
 class RandomGenerator:
