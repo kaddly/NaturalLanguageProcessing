@@ -38,22 +38,22 @@ def _read_wiki(data_dir, file_name):
 
 def BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge):
     BPE = BytePairEncoding(train_sentences, num_merge, ['<unk>', '</w>', '<masked>', '<sep>'], min_freq=5)
-    if not os.path.exists(f'./data/BPE_Decoding_token{num_merge}/'):
+    if not os.path.exists(f'../data/BPE_Decoding_token{num_merge}/'):
         train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(
             delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
-        os.mkdir(f'./data/BPE_Decoding_token{num_merge}/')
-        with open(f'./data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'wb') as f:
+        os.mkdir(f'../data/BPE_Decoding_token{num_merge}/')
+        with open(f'../data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'wb') as f:
             pickle.dump(train_tokens, f)
-        with open(f'./data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'wb') as f:
+        with open(f'../data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'wb') as f:
             pickle.dump(val_tokens, f)
-        with open(f'./data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'wb') as f:
+        with open(f'../data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'wb') as f:
             pickle.dump(test_tokens, f)
     else:
-        with open(f'./data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'rb') as f:
+        with open(f'../data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'rb') as f:
             train_tokens = pickle.load(f)
-        with open(f'./data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'rb') as f:
+        with open(f'../data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'rb') as f:
             val_tokens = pickle.load(f)
-        with open(f'./data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'rb') as f:
+        with open(f'../data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'rb') as f:
             test_tokens = pickle.load(f)
     return train_tokens, val_tokens, test_tokens, BPE
 
