@@ -182,8 +182,11 @@ class BytePairEncoding:
         return output
 
     def segment_BPE(self, sentences):
-        all_tokens = tokenize(sentences, 'word')
-        return [self.segment_BPE_tokens(tokens) for tokens in tqdm(all_tokens, desc='BPE Decoding')]
+        if not isinstance(sentences[0], (list, tuple)):
+            all_tokens = tokenize(sentences, 'word')
+            return [self.segment_BPE_tokens(tokens) for tokens in tqdm(all_tokens, desc='BPE Decoding')]
+        else:
+            return [self.segment_BPE(sentence) for sentence in sentences]
 
     def __len__(self):
         return len(self.symbols)

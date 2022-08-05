@@ -26,18 +26,19 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5), cma
 
 
 def _read_wiki(data_dir, file_name):
-    file_path = os.path.join(data_dir, file_name)
-    contexts = []
-    with open(file_path, 'r', encoding='UTF-8') as f:
-        for line in f.readlines():
-            if len(line.split(' . ')) < 2:
-                continue
-            contexts.extend(line.strip().lower().split(' . '))
-    return contexts
+    file_name = os.path.join(data_dir, file_name)
+    with open(file_name, 'r', encoding='UTF-8') as f:
+        lines = f.readlines()
+    # ⼤写字⺟转换为⼩写字⺟
+    paragraphs = [line.strip().lower().split(' . ')
+                  for line in lines if len(line.split(' . ')) >= 2]
+    random.shuffle(paragraphs)
+    return paragraphs
 
 
 def BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge):
-    BPE = BytePairEncoding(train_sentences, num_merge, ['<unk>', '</w>', '<masked>', '<sep>'], min_freq=5)
+    sentences = [sentence for sentences in train_sentences for sentence in sentences]
+    BPE = BytePairEncoding(sentences, num_merge, ['<unk>', '</w>', '<masked>', '<sep>'], min_freq=5)
     if not os.path.exists(f'../data/BPE_Decoding_token{num_merge}/'):
         train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(
             delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
@@ -67,12 +68,14 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
     return tokens
 
 
+def reconstruct_tokens(all_tokens, reconstruct_ways):
+    pass
+
+
 def load_data_wiki(batch_size, max_len, reconstruct_ways, num_merge=10000):
     data_dir = './data/wikitext-2'
     train_sentences = _read_wiki(data_dir, 'wiki.train.tokens')
     val_sentences = _read_wiki(data_dir, 'wiki.valid.tokens')
     test_sentences = _read_wiki(data_dir, 'wiki.test.tokens')
-    if 'Sentence Permutation' in reconstruct_ways:
-        pass
     train_tokens, val_tokens, test_tokens, BPE = BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge)
     return
