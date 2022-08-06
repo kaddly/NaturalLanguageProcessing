@@ -68,23 +68,28 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
     return tokens
 
 
-def Token_Masking(all_tokens):
+def Token_Masking(tokens):
+    candidate_pred_positions = []
+    for i, token in enumerate(tokens):
+        # 在遮蔽语⾔模型任务中不会预测特殊词元
+        if token in ['<bos>', '<sep>', '<eos>']:
+            continue
+        candidate_pred_positions.append(i)
+
+
+def Token_Deletion(tokens):
     pass
 
 
-def Token_Deletion(all_tokens):
+def Text_Infilling(tokens):
     pass
 
 
-def Text_Infilling(all_tokens):
+def Sentence_Permutation(tokens):
     pass
 
 
-def Sentence_Permutation(all_tokens):
-    pass
-
-
-def Document_Rotation(all_tokens):
+def Document_Rotation(tokens):
     pass
 
 
@@ -103,10 +108,11 @@ def reconstruct_tokens(all_tokens, reconstruct_ways):
     return all_tokens
 
 
-def load_data_wiki(batch_size, max_len, reconstruct_ways, num_merge=10000):
+def load_data_wiki(batch_size, max_len, reconstruct_ways=['Sentence_Permutation', 'Text_Infilling'], num_merge=10000):
     data_dir = '../data/wikitext-2'
     train_sentences = _read_wiki(data_dir, 'wiki.train.tokens')
     val_sentences = _read_wiki(data_dir, 'wiki.valid.tokens')
     test_sentences = _read_wiki(data_dir, 'wiki.test.tokens')
     train_tokens, val_tokens, test_tokens, BPE = BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge)
+    reconstruct_tokens(reconstruct_ways)
     return
