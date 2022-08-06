@@ -68,12 +68,43 @@ def get_tokens_and_segments(tokens_a, tokens_b=None):
     return tokens
 
 
-def reconstruct_tokens(all_tokens, reconstruct_ways):
+def Token_Masking(all_tokens):
     pass
 
 
+def Token_Deletion(all_tokens):
+    pass
+
+
+def Text_Infilling(all_tokens):
+    pass
+
+
+def Sentence_Permutation(all_tokens):
+    pass
+
+
+def Document_Rotation(all_tokens):
+    pass
+
+
+def reconstruct_tokens(all_tokens, reconstruct_ways):
+    reconstruct_way = random.choices(reconstruct_ways, k=2)
+    if 'Sentence_Permutation' in reconstruct_way:
+        pass
+    elif 'Document_Rotation' in reconstruct_way:
+        pass
+    if 'Token_Masking' in reconstruct_way:
+        pass
+    elif 'Token_Deletion' in reconstruct_way:
+        pass
+    elif 'Text_Infilling' in reconstruct_way:
+        pass
+    return all_tokens
+
+
 def load_data_wiki(batch_size, max_len, reconstruct_ways, num_merge=10000):
-    data_dir = './data/wikitext-2'
+    data_dir = '../data/wikitext-2'
     train_sentences = _read_wiki(data_dir, 'wiki.train.tokens')
     val_sentences = _read_wiki(data_dir, 'wiki.valid.tokens')
     test_sentences = _read_wiki(data_dir, 'wiki.test.tokens')
