@@ -38,7 +38,7 @@ def _read_wiki(data_dir, file_name):
 
 def BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge):
     sentences = [sentence for sentences in train_sentences for sentence in sentences]
-    BPE = BytePairEncoding(sentences, num_merge, ['<unk>', '</w>', '<masked>', '<sep>'], min_freq=5)
+    BPE = BytePairEncoding(sentences, num_merge, ['<unk>', '</w>', '<s>', '</s>', '<masked>', '<pad>'], min_freq=5)
     if not os.path.exists(f'../data/BPE_Decoding_token{num_merge}/'):
         train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(
             delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
@@ -62,19 +62,53 @@ def BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge):
 # ⽣成下⼀句预测任务的数据
 def get_tokens_and_segments(tokens_a, tokens_b=None):
     """获取输⼊序列的词元及其⽚段索引"""
-    tokens = ['<bos>'] + tokens_a + ['<sep>']
-    if tokens_b is not None:
-        tokens += tokens_b + ['<eos>']
-    return tokens
+    if tokens_b is None:
+        return ['<s>'] + tokens_a + ['</s>']
+    cls = ['<s>']
+    sep = ['</s>']
+    return cls + tokens_a + sep + sep + tokens_b + sep
 
 
-def Token_Masking(tokens):
+# ⽣成遮蔽语⾔模型任务的数据
+def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds, vocab):
+    # 为遮蔽语⾔模型的输⼊创建新的词元副本，其中输⼊可能包含替换的“<mask>”或随机词元
+    mlm_input_tokens = [token for token in tokens]
+    pred_positions_and_labels = []
+    # 打乱用于屏蔽语言模型任务中获取15%随机词元进行预测
+    random.shuffle(candidate_pred_positions)
+    for mlm_pred_position in candidate_pred_positions:
+        if len(pred_positions_and_labels) >= num_mlm_preds:
+            break
+        masked_token = None
+        # 80%的时间：将词替换为"<masked>"词元
+        if random.random() < 0.8:
+            masked_token = '<masked>'
+        else:
+            # 10%的时间：词保持不变
+            if random.random() < 0.5:
+                masked_token = tokens[mlm_pred_position]
+            # 10%的时间：⽤随机词替换该词
+            else:
+                masked_token = random.choice(vocab.symbols)
+        mlm_input_tokens[mlm_pred_position] = masked_token
+        pred_positions_and_labels.append((mlm_pred_position, tokens[mlm_pred_position]))
+    return mlm_input_tokens, pred_positions_and_labels
+
+
+def Token_Masking(tokens, vocab):
     candidate_pred_positions = []
     for i, token in enumerate(tokens):
         # 在遮蔽语⾔模型任务中不会预测特殊词元
-        if token in ['<bos>', '<sep>', '<eos>']:
+        if token in ['<s>', '</s>']:
             continue
         candidate_pred_positions.append(i)
+    # 遮蔽语⾔模型任务中预测15%的随机词元
+    num_mlm_pred = max(1, round(len(tokens) * 0.15))
+    mlm_input_tokens, pred_positions_and_labels = _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_pred, vocab)
+    pred_positions_and_labels = sorted(pred_positions_and_labels, key=lambda x: x[0])
+    pred_positions = [v[0] for v in pred_positions_and_labels]
+    mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
+    return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
 
 
 def Token_Deletion(tokens):
@@ -93,7 +127,7 @@ def Document_Rotation(tokens):
     pass
 
 
-def reconstruct_tokens(all_tokens, reconstruct_ways):
+def reconstruct_tokens(all_tokens, reconstruct_ways, vocab):
     reconstruct_way = random.choices(reconstruct_ways, k=2)
     if 'Sentence_Permutation' in reconstruct_way:
         pass
