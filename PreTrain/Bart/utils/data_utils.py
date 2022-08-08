@@ -59,14 +59,27 @@ def BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge):
     return train_tokens, val_tokens, test_tokens, BPE
 
 
-# ⽣成下⼀句预测任务的数据
-def get_tokens_and_segments(tokens_a, tokens_b=None):
+def build_inputs_with_special_tokens(tokens_a, tokens_b=None):
     """获取输⼊序列的词元及其⽚段索引"""
     if tokens_b is None:
         return ['<s>'] + tokens_a + ['</s>']
     cls = ['<s>']
     sep = ['</s>']
     return cls + tokens_a + sep + sep + tokens_b + sep
+
+
+def _get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=True):
+    nsp_data_from_paragraph = []
+    for i in range(len(paragraph) - 1):
+        if is_sentence_permutation:
+            tokens_a, tokens_b = Sentence_Permutation(paragraph[i], paragraph[i + 1])
+        else:
+            tokens_a, tokens_b = Document_Rotation(paragraph[i], paragraph[i + 1])
+        if len(tokens_a) + len(tokens_b) + 3 > max_len:
+            continue
+        tokens = build_inputs_with_special_tokens(tokens_a, tokens_b)
+        nsp_data_from_paragraph.append(tokens)
+    return nsp_data_from_paragraph
 
 
 # ⽣成遮蔽语⾔模型任务的数据
@@ -104,7 +117,8 @@ def Token_Masking(tokens, vocab):
         candidate_pred_positions.append(i)
     # 遮蔽语⾔模型任务中预测15%的随机词元
     num_mlm_pred = max(1, round(len(tokens) * 0.15))
-    mlm_input_tokens, pred_positions_and_labels = _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_pred, vocab)
+    mlm_input_tokens, pred_positions_and_labels = _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_pred,
+                                                                      vocab)
     pred_positions_and_labels = sorted(pred_positions_and_labels, key=lambda x: x[0])
     pred_positions = [v[0] for v in pred_positions_and_labels]
     mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
@@ -119,27 +133,34 @@ def Text_Infilling(tokens):
     pass
 
 
-def Sentence_Permutation(tokens):
-    pass
+def Sentence_Permutation(token_a, token_b, replace_probability=0.5):
+    if random.random() < replace_probability:
+        return token_a, token_b
+    else:
+        return token_b, token_a
 
 
-def Document_Rotation(tokens):
-    pass
+def Document_Rotation(token_a, token_b):
+    rotation_idx = random.choice(range(len(token_a)))
+    return token_a[rotation_idx:], token_b+token_a[:rotation_idx]
 
 
-def reconstruct_tokens(all_tokens, reconstruct_ways, vocab):
+def reconstruct_tokens(paragraphs, reconstruct_ways, vocab, max_len):
     reconstruct_way = random.choices(reconstruct_ways, k=2)
+    examples = []
     if 'Sentence_Permutation' in reconstruct_way:
-        pass
+        for paragraph in paragraphs:
+            examples.extend(_get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=True))
     elif 'Document_Rotation' in reconstruct_way:
-        pass
+        for paragraph in paragraphs:
+            examples.extend(_get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=False))
     if 'Token_Masking' in reconstruct_way:
         pass
     elif 'Token_Deletion' in reconstruct_way:
         pass
     elif 'Text_Infilling' in reconstruct_way:
         pass
-    return all_tokens
+    return
 
 
 def load_data_wiki(batch_size, max_len, reconstruct_ways=['Sentence_Permutation', 'Text_Infilling'], num_merge=10000):
