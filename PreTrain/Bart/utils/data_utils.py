@@ -70,6 +70,7 @@ def build_inputs_with_special_tokens(tokens_a, tokens_b=None):
 
 def _get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=True):
     nsp_data_from_paragraph = []
+    label_from_paragraph = []
     for i in range(len(paragraph) - 1):
         if is_sentence_permutation:
             tokens_a, tokens_b = Sentence_Permutation(paragraph[i], paragraph[i + 1])
@@ -79,7 +80,9 @@ def _get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=Tru
             continue
         tokens = build_inputs_with_special_tokens(tokens_a, tokens_b)
         nsp_data_from_paragraph.append(tokens)
-    return nsp_data_from_paragraph
+        label_tokens = build_inputs_with_special_tokens(paragraph[i], paragraph[i + 1])
+        label_from_paragraph.append(label_tokens)
+    return nsp_data_from_paragraph, label_from_paragraph
 
 
 # ⽣成遮蔽语⾔模型任务的数据
@@ -169,13 +172,17 @@ def reconstruct_tokens(paragraphs, reconstruct_ways, vocab, max_len):
     p = Poisson(3)
     generator = RandomGenerator(p.sample_weights)
     examples = []
-
+    label_examples = []
     if 'Sentence_Permutation' in reconstruct_way:
         for paragraph in paragraphs:
-            examples.extend(_get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=True))
+            example, label_example = _get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=True)
+            examples.extend(example)
+            label_examples.extend(label_example)
     elif 'Document_Rotation' in reconstruct_way:
         for paragraph in paragraphs:
-            examples.extend(_get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=False))
+            example, label_example = _get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=False)
+            examples.extend(example)
+            label_examples.extend(label_example)
     else:
         raise ValueError("unknown reconstruct way!")
 
@@ -187,7 +194,7 @@ def reconstruct_tokens(paragraphs, reconstruct_ways, vocab, max_len):
         examples = [_get_mlm_data_from_tokens(example, vocab, 'Text_Infilling', generator) for example in examples]
     else:
         raise ValueError("unknown reconstruct way!")
-    return examples
+    return examples, label_examples
 
 
 class _wiki_dataset(Dataset):
