@@ -83,14 +83,13 @@ def _get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=Tru
 
 
 # ⽣成遮蔽语⾔模型任务的数据
-def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds, vocab, reconstruct_way):
+def Token_Masking(tokens, candidate_pred_positions, num_mlm_preds, vocab):
     # 为遮蔽语⾔模型的输⼊创建新的词元副本，其中输⼊可能包含替换的“<mask>”或随机词元
     mlm_input_tokens = [token for token in tokens]
-    pred_positions_and_labels = []
     # 打乱用于屏蔽语言模型任务中获取15%随机词元进行预测
     random.shuffle(candidate_pred_positions)
-    for mlm_pred_position in candidate_pred_positions:
-        if len(pred_positions_and_labels) >= num_mlm_preds:
+    for i, mlm_pred_position in enumerate(candidate_pred_positions):
+        if i >= num_mlm_preds:
             break
         masked_token = None
         # 80%的时间：将词替换为"<masked>"词元
@@ -104,11 +103,18 @@ def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds, vocab, 
             else:
                 masked_token = random.choice(vocab.symbols)
         mlm_input_tokens[mlm_pred_position] = masked_token
-        pred_positions_and_labels.append((mlm_pred_position, tokens[mlm_pred_position]))
-    return mlm_input_tokens, pred_positions_and_labels
+    return mlm_input_tokens
 
 
-def _get_mlm_data_from_tokens(tokens, vocab, reconstruct_way):
+def Token_Deletion(tokens, candidate_pred_positions, num_mlm_preds):
+    pass
+
+
+def Text_Infilling(tokens, candidate_pred_positions, num_mlm_preds, generator):
+    pass
+
+
+def _get_mlm_data_from_tokens(tokens, vocab, reconstruct_way, generator=None):
     candidate_pred_positions = []
     for i, token in enumerate(tokens):
         # 在遮蔽语⾔模型任务中不会预测特殊词元
@@ -117,24 +123,14 @@ def _get_mlm_data_from_tokens(tokens, vocab, reconstruct_way):
         candidate_pred_positions.append(i)
     # 遮蔽语⾔模型任务中预测15%的随机词元
     num_mlm_pred = max(1, round(len(tokens) * 0.15) if reconstruct_way == 'Token_Masking' else round(len(tokens) * 0.3))
-    mlm_input_tokens, pred_positions_and_labels = _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_pred,
-                                                                      vocab, reconstruct_way)
-    pred_positions_and_labels = sorted(pred_positions_and_labels, key=lambda x: x[0])
-    pred_positions = [v[0] for v in pred_positions_and_labels]
-    mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
-    return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
-
-
-def Token_Masking(tokens):
-    pass
-
-
-def Token_Deletion(tokens):
-    pass
-
-
-def Text_Infilling(tokens):
-    pass
+    if reconstruct_way == 'Token_Masking':
+        return Token_Masking(tokens, candidate_pred_positions, num_mlm_pred, vocab)
+    elif reconstruct_way == 'Token_Deletion':
+        return Token_Deletion(tokens, candidate_pred_positions, num_mlm_pred)
+    elif reconstruct_way == 'Text_Infilling':
+        return Text_Infilling(tokens, candidate_pred_positions, num_mlm_pred, generator)
+    else:
+        raise ImportError("unknown reconstruct way!")
 
 
 def Sentence_Permutation(token_a, token_b, replace_probability=0.5):
@@ -151,6 +147,9 @@ def Document_Rotation(token_a, token_b):
 
 def reconstruct_tokens(paragraphs, reconstruct_ways, vocab, max_len):
     reconstruct_way = random.choices(reconstruct_ways, k=2)
+    # 泊松分布为3
+    p = Poisson(3)
+    generator = RandomGenerator(p.sample_weights)
     examples = []
     if 'Sentence_Permutation' in reconstruct_way:
         for paragraph in paragraphs:
@@ -163,7 +162,7 @@ def reconstruct_tokens(paragraphs, reconstruct_ways, vocab, max_len):
     elif 'Token_Deletion' in reconstruct_way:
         examples = [_get_mlm_data_from_tokens(example, vocab, 'Token_Deletion') for example in examples]
     elif 'Text_Infilling' in reconstruct_way:
-        examples = [_get_mlm_data_from_tokens(example, vocab, 'Text_Infilling') for example in examples]
+        examples = [_get_mlm_data_from_tokens(example, vocab, 'Text_Infilling', generator) for example in examples]
     return examples
 
 
