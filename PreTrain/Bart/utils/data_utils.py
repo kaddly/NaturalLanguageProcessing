@@ -107,11 +107,31 @@ def Token_Masking(tokens, candidate_pred_positions, num_mlm_preds, vocab):
 
 
 def Token_Deletion(tokens, candidate_pred_positions, num_mlm_preds):
-    pass
+    mlm_input_tokens = [token for token in tokens]
+    # 打乱用于屏蔽语言模型任务中获取15%随机词元进行预测
+    random.shuffle(candidate_pred_positions)
+    for i, mlm_pred_position in enumerate(candidate_pred_positions):
+        if i >= num_mlm_preds:
+            break
+        mlm_input_tokens.pop(mlm_pred_position)
+    return mlm_input_tokens
 
 
 def Text_Infilling(tokens, candidate_pred_positions, num_mlm_preds, generator):
-    pass
+    mlm_input_tokens = [token for token in tokens]
+    total_mask_num = 0
+    while total_mask_num < num_mlm_preds:
+        mask_num = generator.draw()
+        start_idx = random.choice(candidate_pred_positions)
+        if mask_num != 0:
+            span_tokens = tokens[start_idx:start_idx + mask_num]
+            if '<s>' in span_tokens or '</s>' in span_tokens:
+                continue
+            for i in range(start_idx, start_idx + mask_num):
+                mlm_input_tokens.pop(i)
+        mlm_input_tokens.insert(start_idx, '<mask>')
+        total_mask_num += mask_num
+    return mlm_input_tokens
 
 
 def _get_mlm_data_from_tokens(tokens, vocab, reconstruct_way, generator=None):
@@ -129,8 +149,6 @@ def _get_mlm_data_from_tokens(tokens, vocab, reconstruct_way, generator=None):
         return Token_Deletion(tokens, candidate_pred_positions, num_mlm_pred)
     elif reconstruct_way == 'Text_Infilling':
         return Text_Infilling(tokens, candidate_pred_positions, num_mlm_pred, generator)
-    else:
-        raise ImportError("unknown reconstruct way!")
 
 
 def Sentence_Permutation(token_a, token_b, replace_probability=0.5):
@@ -151,18 +169,24 @@ def reconstruct_tokens(paragraphs, reconstruct_ways, vocab, max_len):
     p = Poisson(3)
     generator = RandomGenerator(p.sample_weights)
     examples = []
+
     if 'Sentence_Permutation' in reconstruct_way:
         for paragraph in paragraphs:
             examples.extend(_get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=True))
     elif 'Document_Rotation' in reconstruct_way:
         for paragraph in paragraphs:
             examples.extend(_get_nsp_data_from_paragraph(paragraph, max_len, is_sentence_permutation=False))
+    else:
+        raise ValueError("unknown reconstruct way!")
+
     if 'Token_Masking' in reconstruct_way:
         examples = [_get_mlm_data_from_tokens(example, vocab, 'Token_Masking') for example in examples]
     elif 'Token_Deletion' in reconstruct_way:
         examples = [_get_mlm_data_from_tokens(example, vocab, 'Token_Deletion') for example in examples]
     elif 'Text_Infilling' in reconstruct_way:
         examples = [_get_mlm_data_from_tokens(example, vocab, 'Text_Infilling', generator) for example in examples]
+    else:
+        raise ValueError("unknown reconstruct way!")
     return examples
 
 
