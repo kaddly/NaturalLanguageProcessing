@@ -5,7 +5,7 @@ import pickle
 from joblib import Parallel, delayed
 import torch
 from torch.utils.data import Dataset, DataLoader
-from utils.token_utils import BytePairEncoding
+from utils.token_utils import BytePairEncoding, truncate_pad
 from utils.sample_utils import RandomGenerator, Poisson
 
 
@@ -198,14 +198,22 @@ def reconstruct_tokens(paragraphs, reconstruct_ways, vocab, max_len):
 
 
 class _wiki_dataset(Dataset):
-    def __init__(self, **kwargs):
+    def __init__(self, paragraphs, reconstruct_ways, vocab, max_len, **kwargs):
         super(_wiki_dataset, self).__init__(**kwargs)
+        self.max_len = max_len
+        self.vocab = vocab
+        source_tokens, target_tokens = reconstruct_tokens(paragraphs, reconstruct_ways, self.vocab, max_len)
+        self.source = [self.vocab[source_token] for source_token in source_tokens]
+        self.target = [self.vocab[target_token] for target_token in target_tokens]
 
     def __getitem__(self, item):
-        pass
+        src, tgt = self.source[item], self.target[item]
+        src = truncate_pad(src, self.max_len, self.vocab['<pad>'])
+        tgt = truncate_pad(tgt, self.max_len, self.vocab['<pad>'])
+        return torch.tensor(src), torch.tensor(tgt)
 
     def __len__(self):
-        pass
+        return len(self.source)
 
 
 def load_data_wiki(batch_size, max_len, reconstruct_ways=['Sentence_Permutation', 'Text_Infilling'], num_merge=10000):
@@ -214,7 +222,10 @@ def load_data_wiki(batch_size, max_len, reconstruct_ways=['Sentence_Permutation'
     val_sentences = _read_wiki(data_dir, 'wiki.valid.tokens')
     test_sentences = _read_wiki(data_dir, 'wiki.test.tokens')
     train_tokens, val_tokens, test_tokens, BPE = BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge)
-    reconstruct_tokens(train_tokens, reconstruct_ways, BPE, max_len)
-    reconstruct_tokens(val_tokens, reconstruct_ways, BPE, max_len)
-    reconstruct_tokens(test_tokens, reconstruct_ways, BPE, max_len)
-    return
+    train_dataset = _wiki_dataset(train_tokens, reconstruct_ways, BPE, max_len)
+    val_dataset = _wiki_dataset(val_tokens, reconstruct_ways, BPE, max_len)
+    test_dataset = _wiki_dataset(test_tokens, reconstruct_ways, BPE, max_len)
+    train_iter = DataLoader(train_dataset, batch_size)
+    val_iter = DataLoader(val_dataset, batch_size)
+    test_iter = DataLoader(test_dataset, batch_size)
+    return train_iter, val_iter, test_iter, BPE
