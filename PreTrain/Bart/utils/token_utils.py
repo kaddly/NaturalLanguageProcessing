@@ -178,15 +178,14 @@ class BytePairEncoding:
             if start < len(token):
                 cur_output.append("<unk>")
             output.extend(cur_output)
-        output.extend(['<sep>'])
         return output
 
     def segment_BPE(self, sentences):
         if not isinstance(sentences[0], (list, tuple)):
             all_tokens = tokenize(sentences, 'word')
-            return [self.segment_BPE_tokens(tokens) for tokens in tqdm(all_tokens, desc='BPE Decoding')]
+            return [self.segment_BPE_tokens(tokens) for tokens in all_tokens]
         else:
-            return [self.segment_BPE(sentence) for sentence in sentences]
+            return [self.segment_BPE(sentence) for sentence in tqdm(sentences, desc='BPE Decoding')]
 
     def __len__(self):
         return len(self.symbols)

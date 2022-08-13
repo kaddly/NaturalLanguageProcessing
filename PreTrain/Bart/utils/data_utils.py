@@ -23,8 +23,11 @@ def BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge):
     sentences = [sentence for sentences in train_sentences for sentence in sentences]
     BPE = BytePairEncoding(sentences, num_merge, ['<unk>', '</w>', '<s>', '</s>', '<masked>', '<pad>'], min_freq=5)
     if not os.path.exists(f'../data/BPE_Decoding_token{num_merge}/'):
-        train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3)(
-            delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
+        train_tokens = BPE.segment_BPE(train_sentences)
+        val_tokens = BPE.segment_BPE(val_sentences)
+        test_tokens = BPE.segment_BPE(test_sentences)
+        # train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3, verbose=1)(
+        #     delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
         os.mkdir(f'../data/BPE_Decoding_token{num_merge}/')
         with open(f'../data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'wb') as f:
             pickle.dump(train_tokens, f)
@@ -99,42 +102,43 @@ def Token_Deletion(tokens, candidate_pred_positions, num_mlm_preds):
     for i, mlm_pred_position in enumerate(candidate_pred_positions):
         if i >= num_mlm_preds:
             break
-        mlm_input_tokens.pop(mlm_pred_position)
+        mlm_input_tokens.remove(tokens[mlm_pred_position])
     return mlm_input_tokens
 
 
-def Text_Infilling(tokens, candidate_pred_positions, num_mlm_preds, generator):
+def Text_Infilling(tokens, num_mlm_preds, generator):
     mlm_input_tokens = [token for token in tokens]
     total_mask_num = 0
     while total_mask_num < num_mlm_preds:
         mask_num = generator.draw()
-        start_idx = random.choice(candidate_pred_positions)
+        mask_num = mask_num if (num_mlm_preds - total_mask_num) > mask_num else (num_mlm_preds - total_mask_num)
+        start_idx = random.choice(list(range(len(mlm_input_tokens) - mask_num)))
         if mask_num != 0:
-            span_tokens = tokens[start_idx:start_idx + mask_num]
-            if '<s>' in span_tokens or '</s>' in span_tokens:
+            span_tokens = mlm_input_tokens[start_idx:start_idx + mask_num]
+            if '<s>' in span_tokens or '</s>' in span_tokens or '<masked>' in span_tokens:
                 continue
-            for i in range(start_idx, start_idx + mask_num):
+            for i in range(start_idx + mask_num - 1, start_idx - 1, -1):
                 mlm_input_tokens.pop(i)
-        mlm_input_tokens.insert(start_idx, '<mask>')
+        mlm_input_tokens.insert(start_idx, '<masked>')
         total_mask_num += mask_num
     return mlm_input_tokens
 
 
 def _get_mlm_data_from_tokens(tokens, vocab, reconstruct_way, generator=None):
+    # 遮蔽语⾔模型任务中预测15%的随机词元
+    num_mlm_pred = max(1, round(len(tokens) * 0.15) if reconstruct_way == 'Token_Masking' else round(len(tokens) * 0.3))
+    if reconstruct_way == 'Text_Infilling':
+        return Text_Infilling(tokens, num_mlm_pred, generator)
     candidate_pred_positions = []
     for i, token in enumerate(tokens):
         # 在遮蔽语⾔模型任务中不会预测特殊词元
         if token in ['<s>', '</s>']:
             continue
         candidate_pred_positions.append(i)
-    # 遮蔽语⾔模型任务中预测15%的随机词元
-    num_mlm_pred = max(1, round(len(tokens) * 0.15) if reconstruct_way == 'Token_Masking' else round(len(tokens) * 0.3))
     if reconstruct_way == 'Token_Masking':
         return Token_Masking(tokens, candidate_pred_positions, num_mlm_pred, vocab)
     elif reconstruct_way == 'Token_Deletion':
         return Token_Deletion(tokens, candidate_pred_positions, num_mlm_pred)
-    elif reconstruct_way == 'Text_Infilling':
-        return Text_Infilling(tokens, candidate_pred_positions, num_mlm_pred, generator)
 
 
 def Sentence_Permutation(token_a, token_b, replace_probability=0.5):
@@ -150,7 +154,7 @@ def Document_Rotation(token_a, token_b):
 
 
 def reconstruct_tokens(paragraphs, reconstruct_ways, vocab, max_len):
-    reconstruct_way = random.choices(reconstruct_ways, k=2)
+    reconstruct_way = random.sample(reconstruct_ways, k=2)
     # 泊松分布为3
     p = Poisson(3)
     generator = RandomGenerator(p.sample_weights)
@@ -208,7 +212,7 @@ def load_data_wiki(batch_size, max_len, reconstruct_ways=['Sentence_Permutation'
     train_dataset = _wiki_dataset(train_tokens, reconstruct_ways, BPE, max_len)
     val_dataset = _wiki_dataset(val_tokens, reconstruct_ways, BPE, max_len)
     test_dataset = _wiki_dataset(test_tokens, reconstruct_ways, BPE, max_len)
-    train_iter = DataLoader(train_dataset, batch_size)
-    val_iter = DataLoader(val_dataset, batch_size)
-    test_iter = DataLoader(test_dataset, batch_size)
+    train_iter = DataLoader(train_dataset, batch_size, shuffle=True)
+    val_iter = DataLoader(val_dataset, batch_size, shuffle=True)
+    test_iter = DataLoader(test_dataset, batch_size, shuffle=True)
     return train_iter, val_iter, test_iter, BPE
