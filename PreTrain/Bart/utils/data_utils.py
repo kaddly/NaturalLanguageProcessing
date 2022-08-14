@@ -195,9 +195,10 @@ class _wiki_dataset(Dataset):
 
     def __getitem__(self, item):
         src, tgt = self.source[item], self.target[item]
+        src_len, tgt_len = len(src), len(tgt)
         src = truncate_pad(src, self.max_len, self.vocab['<pad>'])
         tgt = truncate_pad(tgt, self.max_len, self.vocab['<pad>'])
-        return torch.tensor(src), torch.tensor(tgt)
+        return torch.Tensor(src), torch.tensor(src_len), torch.Tensor(tgt), torch.tensor(tgt_len)
 
     def __len__(self):
         return len(self.source)
