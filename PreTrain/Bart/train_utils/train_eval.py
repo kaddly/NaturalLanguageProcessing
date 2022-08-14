@@ -48,7 +48,7 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
     dev_best_loss = float('inf')
     last_improve = 0  # 记录上次验证集loss下降的batch数
     flag = False  # 记录是否很久没有效果提升
-    metric = Accumulator(4)
+    metric = Accumulator(3)
 
     # 模型参数保存路径
     saved_dir = '../saved_dict'
@@ -62,10 +62,37 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
         for i, batch in enumerate(train_iter):
             optimizer.zero_grad()
             X, X_valid_len, Y, Y_valid_len = [x.to(devices[0]) for x in batch]
-            bos = torch.tensor([vocab['<bos>']] * Y.shape[0], device=devices[0]).reshape(-1, 1)
+            bos = torch.tensor([vocab['<s>']] * Y.shape[0], device=devices[0]).reshape(-1, 1)
             dec_input = torch.cat([bos, Y[:, :-1]], 1)  # 强制教学
             Y_hat, _ = net(X, dec_input, X_valid_len)
             train_loss = loss(Y_hat, Y, Y_valid_len)
             train_loss.sum().backward()
             grad_clipping(net, 1)
             optimizer.step()
+            lr_scheduler.step()
+            with torch.no_grad():
+                metric.add(train_loss.sum(), accuracy(Y_hat.reshape(-1, len(vocab)), Y.reshape(-1)), Y.shape[0])
+            if total_batch % 20 == 0:
+                lr_current = optimizer.param_groups[0]["lr"]
+                dev_acc, dev_loss = evaluate_accuracy_gpu(net, val_iter, loss, len(vocab))
+                if dev_loss < dev_best_loss:
+                    torch.save(net.state_dict(), os.path.join(parameter_path, model_file + '.ckpt'))
+                    dev_best_loss = dev_loss
+                    improve = '*'
+                    last_improve = total_batch
+                else:
+                    improve = ''
+                time_dif = timedelta(seconds=int(round(time.time() - start_time)))
+                msg = 'Iter: {0:>6},  Train Loss: {1:>5.4},  Train Acc: {2:>6.2%},  Train lr: {3:>5.4},  Val Loss: {4:>5.4},  Val Acc: {5:>6.2%},  Time: {6} {7}'
+                print(
+                    msg.format(total_batch, metric[0] / metric[2], metric[1] / (total_batch + 1), lr_current, dev_loss,
+                               dev_acc, time_dif, improve))
+                net.train()
+            total_batch += 1
+            if total_batch - last_improve > 5000:
+                # 验证集loss超过1000batch没下降，结束训练
+                print("No optimization for a long time, auto-stopping...")
+                flag = True
+                break
+        if flag:
+            break
