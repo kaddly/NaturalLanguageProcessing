@@ -2,13 +2,12 @@ import time
 import os
 import torch
 from torch import nn
-import torch.nn.functional as f
 from datetime import timedelta
 from .scale_utils import Accumulator, accuracy, MaskedSoftmaxCELoss
 from .optimizer_utils import create_lr_scheduler, grad_clipping
 
 
-def evaluate_accuracy_gpu(net, data_iter, vocab_size, device=None):
+def evaluate_accuracy_gpu(net, data_iter, loss, vocab, device=None):
     """Compute the accuracy for a model on a dataset using a GPU.
 
     Defined in :numref:`sec_lenet`"""
@@ -18,18 +17,15 @@ def evaluate_accuracy_gpu(net, data_iter, vocab_size, device=None):
             device = next(iter(net.parameters())).device
     # No. of correct predictions, no. of predictions
     with torch.no_grad():
-        acc, loss = [], []
-        for X, y in data_iter:
-            if isinstance(X, tuple):
-                # Required for BERT Fine-tuning (to be covered later)
-                X = [x.to(device) for x in X]
-            else:
-                X = X.to(device)
-            y = y.to(device)
-            _, y_hat = net(X[0], None, X[1])
-            acc.append(accuracy(y_hat.reshape(-1, vocab_size), y.reshape(-1)))
-            loss.append(f.cross_entropy(y_hat.reshape(-1, vocab_size), y.reshape(-1)))
-    return sum(acc) / len(acc), sum(loss) / len(loss)
+        val_acc, val_loss = [], []
+        for batch in data_iter:
+            X, X_valid_len, Y, Y_valid_len = [x.to(device) for x in batch]
+            bos = torch.tensor([vocab['<s>']] * Y.shape[0], device=device).reshape(-1, 1)
+            dec_input = torch.cat([bos, Y[:, :-1]], 1)  # 强制教学
+            Y_hat, _ = net(X, dec_input, X_valid_len)
+            val_acc.append(accuracy(Y_hat.reshape(-1, len(vocab)), Y.reshape(-1)))
+            val_loss.append(loss(Y_hat, Y, Y_valid_len).mean())
+    return sum(val_acc) / len(val_acc), sum(val_loss) / len(val_loss)
 
 
 def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
@@ -74,7 +70,7 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
                 metric.add(train_loss.sum(), accuracy(Y_hat.reshape(-1, len(vocab)), Y.reshape(-1)), Y.shape[0])
             if total_batch % 20 == 0:
                 lr_current = optimizer.param_groups[0]["lr"]
-                dev_acc, dev_loss = evaluate_accuracy_gpu(net, val_iter, loss, len(vocab))
+                dev_acc, dev_loss = evaluate_accuracy_gpu(net, val_iter, loss, vocab)
                 if dev_loss < dev_best_loss:
                     torch.save(net.state_dict(), os.path.join(parameter_path, model_file + '.ckpt'))
                     dev_best_loss = dev_loss
@@ -96,3 +92,7 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
                 break
         if flag:
             break
+
+
+def test():
+    pass
