@@ -22,25 +22,25 @@ def _read_wiki(data_dir, file_name):
 def BPE_Encoding(train_sentences, val_sentences, test_sentences, num_merge):
     sentences = [sentence for sentences in train_sentences for sentence in sentences]
     BPE = BytePairEncoding(sentences, num_merge, ['<unk>', '</w>', '<s>', '</s>', '<masked>', '<pad>'], min_freq=5)
-    if not os.path.exists(f'../data/BPE_Decoding_token{num_merge}/'):
+    if not os.path.exists(f'./data/BPE_Decoding_token{num_merge}/'):
         train_tokens = BPE.segment_BPE(train_sentences)
         val_tokens = BPE.segment_BPE(val_sentences)
         test_tokens = BPE.segment_BPE(test_sentences)
         # train_tokens, val_tokens, test_tokens = Parallel(n_jobs=3, verbose=1)(
         #     delayed(BPE.segment_BPE)(sentences) for sentences in [train_sentences, val_sentences, test_sentences])
-        os.mkdir(f'../data/BPE_Decoding_token{num_merge}/')
-        with open(f'../data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'wb') as f:
+        os.mkdir(f'./data/BPE_Decoding_token{num_merge}/')
+        with open(f'./data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'wb') as f:
             pickle.dump(train_tokens, f)
-        with open(f'../data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'wb') as f:
+        with open(f'./data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'wb') as f:
             pickle.dump(val_tokens, f)
-        with open(f'../data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'wb') as f:
+        with open(f'./data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'wb') as f:
             pickle.dump(test_tokens, f)
     else:
-        with open(f'../data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'rb') as f:
+        with open(f'./data/BPE_Decoding_token{num_merge}/train_tokens.plk', 'rb') as f:
             train_tokens = pickle.load(f)
-        with open(f'../data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'rb') as f:
+        with open(f'./data/BPE_Decoding_token{num_merge}/val_tokens.plk', 'rb') as f:
             val_tokens = pickle.load(f)
-        with open(f'../data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'rb') as f:
+        with open(f'./data/BPE_Decoding_token{num_merge}/test_tokens.plk', 'rb') as f:
             test_tokens = pickle.load(f)
     return train_tokens, val_tokens, test_tokens, BPE
 
@@ -205,7 +205,7 @@ class _wiki_dataset(Dataset):
 
 
 def load_data_wiki(batch_size, max_len, reconstruct_ways=['Sentence_Permutation', 'Text_Infilling'], num_merge=10000):
-    data_dir = '../data/wikitext-2'
+    data_dir = './data/wikitext-2'
     train_sentences = _read_wiki(data_dir, 'wiki.train.tokens')
     val_sentences = _read_wiki(data_dir, 'wiki.valid.tokens')
     test_sentences = _read_wiki(data_dir, 'wiki.test.tokens')

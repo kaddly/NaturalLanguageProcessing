@@ -3,8 +3,9 @@ import os
 import torch
 from torch import nn
 from datetime import timedelta
-from .scale_utils import Accumulator, accuracy, MaskedSoftmaxCELoss
+from .scale_utils import accuracy, MaskedSoftmaxCELoss
 from .optimizer_utils import create_lr_scheduler, grad_clipping
+from .distributed_utils import Accumulator
 
 
 def evaluate_accuracy_gpu(net, data_iter, loss, vocab, device=None):
