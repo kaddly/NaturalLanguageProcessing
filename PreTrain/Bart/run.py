@@ -4,9 +4,9 @@ from utils import load_data_wiki, show_heatmaps
 from train_utils import train, test, bleu
 
 if __name__ == '__main__':
-    num_hiddens, num_layers, dropout = 64, 4, 0.1
-    ffn_num_input, ffn_num_hiddens, num_heads = 64, 128, 8
-    batch_size, max_len, num_merge = 512, 64, 10000
+    num_hiddens, num_layers, dropout = 64, 2, 0.1
+    ffn_num_input, ffn_num_hiddens, num_heads = 64, 128, 4
+    batch_size, max_len, num_merge = 256, 64, 5000
     lr, num_epoch = 0.05, 100
     key_size, query_size, value_size = 64, 64, 64
     reconstruct_ways = ['Sentence_Permutation', 'Text_Infilling']
@@ -19,4 +19,5 @@ if __name__ == '__main__':
     decoder = BartDecoder(len(vocab), key_size, query_size, value_size, num_hiddens, norm_shape, ffn_num_input,
                           ffn_num_hiddens, num_heads, num_layers, dropout)
     net = EncoderDecoder(encoder, decoder)
+    print(net)
     train(net, train_iter, val_iter, lr, num_epoch, vocab, devices)

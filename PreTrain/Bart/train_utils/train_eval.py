@@ -36,7 +36,8 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
 
     net.apply(init_weights)
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
-    optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    # optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    optimizer = torch.optim.SGD(net.parameters(), lr=lr)
     lr_scheduler = create_lr_scheduler(optimizer, len(train_iter), num_epochs)
     loss = MaskedSoftmaxCELoss()
     start_time = time.time()
@@ -48,7 +49,7 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
     metric = Accumulator(3)
 
     # 模型参数保存路径
-    saved_dir = '../saved_dict'
+    saved_dir = './saved_dict'
     model_file = 'Bart'
     parameter_path = os.path.join(saved_dir, model_file)
     if not os.path.exists(parameter_path):
