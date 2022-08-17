@@ -1,13 +1,13 @@
 import torch
 from torch.utils.data import DataLoader
-from .Transformer import TransformerEncoder, TransformerDecoder, EncoderDecoder
-from .utils import My_Dataset, show_heatmaps
-from .train_eval import train_seq2seq, predict_seq2seq, bleu
+from Transformer import TransformerEncoder, TransformerDecoder, EncoderDecoder
+from utils import My_Dataset, show_heatmaps
+from train_eval import train_seq2seq, predict_seq2seq, bleu
 import pandas as pd
 
 if __name__ == '__main__':
     num_hiddens, num_layers, dropout, batch_size, num_steps = 32, 2, 0.1, 64, 10
-    lr, num_epochs, device = 0.005, 200, torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    lr, num_epochs, device = 0.005, 320, torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     ffn_num_input, ffn_num_hiddens, num_heads = 32, 64, 4
     key_size, query_size, value_size = 32, 32, 32
     norm_shape = [32]
