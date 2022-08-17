@@ -29,12 +29,22 @@ def evaluate_accuracy_gpu(net, data_iter, loss, vocab, device=None):
     return sum(val_acc) / len(val_acc), sum(val_loss) / len(val_loss)
 
 
-def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
+def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices, is_current_train=True):
     def init_weights(m):
         if type(m) == nn.Linear:
             nn.init.xavier_uniform_(m.weight)
 
-    net.apply(init_weights)
+    # 模型参数保存路径
+    saved_dir = './saved_dict'
+    model_file = 'Bart'
+    parameter_path = os.path.join(saved_dir, model_file)
+    if not os.path.exists(parameter_path):
+        os.mkdir(parameter_path)
+
+    if is_current_train and os.path.exists('./saved_dict/Bart/Bart.ckpt'):
+        net.load_state_dict(torch.load('./saved_dict/Bart/Bart.ckpt'), False)
+    else:
+        net.apply(init_weights)
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
     # optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
@@ -47,13 +57,6 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
     last_improve = 0  # 记录上次验证集loss下降的batch数
     flag = False  # 记录是否很久没有效果提升
     metric = Accumulator(3)
-
-    # 模型参数保存路径
-    saved_dir = './saved_dict'
-    model_file = 'Bart'
-    parameter_path = os.path.join(saved_dir, model_file)
-    if not os.path.exists(parameter_path):
-        os.mkdir(parameter_path)
 
     for epoch in range(num_epochs):
         print('Epoch [{}/{}]'.format(epoch + 1, num_epochs))
@@ -96,5 +99,26 @@ def train(net, train_iter, val_iter, lr, num_epochs, vocab, devices):
             break
 
 
-def test():
+def test(model, data_iter, devices, vocab):
+    if not os.path.exists('./saved_dict/Bart/Bart.ckpt'):
+        print('please train before!')
+        return
+    model.load_state_dict(torch.load('./saved_dict/Bart/Bart.ckpt'), False)
+    model = nn.DataParallel(model, device_ids=devices).to(devices[0])
+    model.eval()
+    loss = MaskedSoftmaxCELoss()
+    with torch.no_grad():
+        test_acc, test_loss = [], []
+        for batch in data_iter:
+            X, X_valid_len, Y, Y_valid_len = [x.to(devices[0]) for x in batch]
+            bos = torch.tensor([vocab['<s>']] * Y.shape[0], device=devices[0]).reshape(-1, 1)
+            dec_input = torch.cat([bos, Y[:, :-1]], 1)  # 强制教学
+            Y_hat, _ = model(X, dec_input, X_valid_len)
+            test_acc.append(accuracy(Y_hat.reshape(-1, len(vocab)), Y.reshape(-1)))
+            test_loss.append(loss(Y_hat, Y, Y_valid_len).mean())
+    print("Test set results:", "loss= {:.4f}".format(sum(test_loss) / len(test_loss)),
+          "accuracy= {:.4f}".format(sum(test_acc) / len(test_acc)))
+
+
+def predict(net, tokens):
     pass
