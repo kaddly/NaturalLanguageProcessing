@@ -183,7 +183,7 @@ def load_data_ptb(batch_size, max_window_size, num_noise_words):
             self.negatives = negatives
 
         def __getitem__(self, item):
-            return (self.centers[item], self.negatives[item], self.contexts[item])
+            return (self.centers[item], self.contexts[item], self.negatives[item])
 
         def __len__(self):
             return len(self.centers)
